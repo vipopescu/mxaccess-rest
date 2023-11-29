@@ -9,8 +9,9 @@ namespace MXAccesRestAPI.MXDataHolder
         void AdviseAll();
         MXAttribute GetData(int key);
         MXAttribute GetData(string fullattrName);
-        List<MXAttribute> GetInstanceData(string tag_name);
+        List<MXAttribute> GetInstanceData(string instance);
         List<MXAttribute> GetBadAndUncertainData();
+        List<MXAttribute> GetBadAndUncertainData(string instance);
         List<MXAttribute> GetAllData();
         bool RemoveData(int key);
         bool RemoveData(string fullattrName);

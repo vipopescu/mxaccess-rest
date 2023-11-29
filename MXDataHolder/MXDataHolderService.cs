@@ -384,6 +384,14 @@ namespace MXAccesRestAPI.MXDataHolder
                     .ToList();
         }
 
+        public List<MXAttribute> GetBadAndUncertainData(string instance)
+        {
+            return _dataStore
+                    .Where(kvp => !GlobalConstants.IsGood(kvp.Value.Quality) && kvp.Value.TagName.StartsWith(instance))
+                    .Select(kvp => kvp.Value)
+                    .ToList();
+        }
+
         public List<MXAttribute> GetAllData()
         {
             return _dataStore
