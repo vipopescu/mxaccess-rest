@@ -105,8 +105,60 @@ namespace MXAccesRestAPI.GRAccess
                 IgObjects instances = galaxy.QueryObjectsByName(EgObjectIsTemplateOrInstance.gObjectIsInstance, tag_names.ToArray());
                 foreach (IgObject item in instances)
                 {
+
                     IAttribute udaInfo = item.Attributes["UDAs"];
                     IAttribute inheritedUdaInfo = item.Attributes["_InheritedUDAs"];
+
+                    IAttribute inheritedExtension = item.Attributes["_InheritedExtensions"];
+
+
+                    // TODO: data population flow
+                    // get all UdaAttribute + extensions (from _InheritedExtensions)
+                    // // has the list of ALL Extensions for this object
+                    // // IE: Fault_Event_EV1 -> alarmextension (from inheritedExtension)
+
+                    // THEN: configure AlarmExtension datatype and add to list =>  (will be used later)
+                    // Fault_Event_EV1.Description -> static values in item.Attributes
+                    // Tag: TLP_NB_6350_0 | AttrName: [Fault_Event_EV1.ActiveAlarmState]  -> static values in item.Attributes
+
+                    // Then create UdaAttribute from (udaInfo & inheritedUdaInfo)
+                    // // add extensions during this (use the AlarmExtension list)
+                    // //  ie: AlarmExtension (Alarm_Event_EV2.ActiveAlarmState)
+                    // // can get values by creating ref
+                    // // string refAlarm = item.Tagname + "." + attr.Name + ".ActiveAlarmState";
+                    // // set "static" values in Extensions
+
+
+
+                    // DEBUG
+                    // foreach (IAttribute attr in item.Attributes) {
+
+
+                    //     XmlSerializer serializerUDA = new XmlSerializer(typeof(UDAInfo));
+                    //     StringReader readerUDA = new StringReader(attr.value.GetString());
+
+                    //     var name = attr.Name;
+                    //     var val = attr.value.GetString();
+                    //     MxDataType type = attr.DataType;
+                    //     var typeStr = type.ToString();
+                    //     var category = attr.AttributeCategory;
+                    //     var catStr = category.ToString();
+                    //     //resultUDA = serializerUDA.Deserialize(readerUDA) as UDAInfo;
+
+                    //     Console.WriteLine("Tag: "+ item.Tagname + "|." + attr.Name + "  Value: "+val);
+                    //     var test = 5;
+
+
+                    //     string refTest = item.Tagname + "." + attr.Name;
+                    //      _mxDataHolder.AddItem(new MXAttribute { TagName = refTest });
+
+                    // }
+
+                    // // DEBUG
+                    // item.Unload();
+                    // continue;
+
+
                     string fullRefName;
 
                     if (!string.IsNullOrEmpty(udaInfo.value.GetString()))
