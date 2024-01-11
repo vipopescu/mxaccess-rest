@@ -71,7 +71,7 @@ namespace MXAccesRestAPI.Classes
         public bool ActiveAlarmState { get; set; }
         public string? Priority { get; set; }
 
-        public string? AlarmDescriptionName { get; set; }
+        public string? Description { get; set; }
 
     }
 

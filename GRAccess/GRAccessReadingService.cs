@@ -101,6 +101,7 @@ namespace MXAccesRestAPI.GRAccess
             {
                 UDAInfo? resultUDA = null;
                 UDAInfo? resultInheritedUDA = null;
+                ExtensionInfo? resultInheritedExtensions = null;
 
                 IgObjects instances = galaxy.QueryObjectsByName(EgObjectIsTemplateOrInstance.gObjectIsInstance, tag_names.ToArray());
                 foreach (IgObject item in instances)
@@ -108,8 +109,72 @@ namespace MXAccesRestAPI.GRAccess
 
                     IAttribute udaInfo = item.Attributes["UDAs"];
                     IAttribute inheritedUdaInfo = item.Attributes["_InheritedUDAs"];
-
                     IAttribute inheritedExtension = item.Attributes["_InheritedExtensions"];
+
+
+                    Dictionary<string, IExtensions> availableExtensions = [];
+                    // Get Extensions linked to attributes/object
+                    if (!string.IsNullOrEmpty(inheritedExtension.value.GetString()))
+                    {
+                        XmlSerializer serializerExtensions = new XmlSerializer(typeof(ExtensionInfo));
+                        StringReader readerExtensions = new StringReader(inheritedExtension.value.GetString());
+                        resultInheritedExtensions = serializerExtensions.Deserialize(readerExtensions) as ExtensionInfo;
+                        if (resultInheritedExtensions != null)
+                        {
+                            foreach (AttributeExtension inheritedExt in resultInheritedExtensions.AttributeExtension)
+                            {
+                                foreach (ExtensionAttribute ext in inheritedExt.Extensions)
+                                {
+                                    switch (ext.ExtensionType)
+                                    {
+                                        case "alarmextension":
+                                            var test = item.Attributes["ActiveAlarmState"];
+                                            var test2 = item.Attributes["ActiveAlarmState"].value;
+                                            var alarm = new AlarmExtension
+                                            {
+                                                ActiveAlarmState = item.Attributes["ActiveAlarmState"].value.GetBoolean(),
+                                                Description = item.Attributes["Description"].value.GetString(),
+                                                Priority = item.Attributes["Priority"].value.GetString(),
+                                            };
+
+                                            // availableExtensions.Add(ext.Name, new AlarmExtension
+                                            // {
+                                            //     ActiveAlarmState = true
+                                            // });
+                                            var debug = 5;
+                                            break;
+                                        case "inputoutputextension":
+                                            // TODO;
+                                            availableExtensions.Add(ext.Name, new IOExtension
+                                            {
+                                            });
+                                            break;
+
+                                        case "booleanextension":
+                                            // TODO;
+                                            break;
+                                        case "historyextension":
+                                            // TODO;
+                                            availableExtensions.Add(ext.Name, new HistExtension
+                                            {
+
+                                            });
+                                            break;
+
+                                        default: break;
+                                    }
+                                }
+
+                            }
+                        }
+                    }
+
+                    // TODO: 
+                    // create Map <attrName, IExtensions>
+                    // foreach inherited extension
+                    // create extension
+                    // populate static values
+                    // get ref
 
 
                     // TODO: data population flow
@@ -129,31 +194,6 @@ namespace MXAccesRestAPI.GRAccess
                     // // set "static" values in Extensions
 
 
-
-                    // DEBUG
-                    // foreach (IAttribute attr in item.Attributes) {
-
-
-                    //     XmlSerializer serializerUDA = new XmlSerializer(typeof(UDAInfo));
-                    //     StringReader readerUDA = new StringReader(attr.value.GetString());
-
-                    //     var name = attr.Name;
-                    //     var val = attr.value.GetString();
-                    //     MxDataType type = attr.DataType;
-                    //     var typeStr = type.ToString();
-                    //     var category = attr.AttributeCategory;
-                    //     var catStr = category.ToString();
-                    //     //resultUDA = serializerUDA.Deserialize(readerUDA) as UDAInfo;
-
-                    //     Console.WriteLine("Tag: "+ item.Tagname + "|." + attr.Name + "  Value: "+val);
-                    //     var test = 5;
-
-
-                    //     string refTest = item.Tagname + "." + attr.Name;
-                    //      _mxDataHolder.AddItem(new MXAttribute { TagName = refTest });
-
-                    // }
-
                     // // DEBUG
                     // item.Unload();
                     // continue;
@@ -168,6 +208,17 @@ namespace MXAccesRestAPI.GRAccess
                         resultUDA = serializerUDA.Deserialize(readerUDA) as UDAInfo;
                         foreach (var attr in resultUDA.Attributes)
                         {
+                            if (resultInheritedExtensions != null)
+                            {
+                                List<ExtensionAttribute> extensionAttrs = resultInheritedExtensions.GetExtensionsByAttrName(attr.Name);
+
+
+                                var debug = 5;
+
+
+                            }
+
+
                             fullRefName = item.Tagname + "." + attr.Name;
                             _mxDataHolder.AddItem(new MXAttribute { TagName = fullRefName });
                             attrCount++;
