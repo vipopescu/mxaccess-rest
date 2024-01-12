@@ -10,6 +10,8 @@ namespace MXAccesRestAPI.XML
 
         [XmlElement(ElementName = "ObjectExtension")]
         public List<ObjectExtension> ObjectExtensions { get; set; } = [];
+
+        [XmlElement(ElementName = "AttributeExtension")]
         public List<AttributeExtension> AttributeExtension { get; set; } = [];
 
         public List<ExtensionAttribute> GetExtensionsByAttrName(string tagName)

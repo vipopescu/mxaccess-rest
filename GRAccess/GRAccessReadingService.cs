@@ -111,17 +111,21 @@ namespace MXAccesRestAPI.GRAccess
                     IAttribute inheritedUdaInfo = item.Attributes["_InheritedUDAs"];
                     IAttribute inheritedExtension = item.Attributes["_InheritedExtensions"];
 
-                    Console.WriteLine($"{item.Tagname} | udaInfo : [{inheritedUdaInfo}]");
-                    Console.WriteLine($"{item.Tagname} | _InheritedUDAs : [{inheritedUdaInfo}]");
-                    Console.WriteLine($"{item.Tagname} | _InheritedExtensions : [{inheritedExtension}]");
+                    Console.WriteLine($"{item.Tagname} | udaInfo : [{inheritedUdaInfo.value.GetString()}]");
+                    Console.WriteLine($"{item.Tagname} | _InheritedUDAs : [{inheritedUdaInfo.value.GetString()}]");
+                    Console.WriteLine($"{item.Tagname} | _InheritedExtensions : [{inheritedExtension.value.GetString()}]");
                     Console.WriteLine();
 
-
+                    if (inheritedExtension.value.GetString().Contains("alarmextension"))
+                    {
+                        Console.WriteLine("");
+                    }
                     Dictionary<string, IExtensions> availableExtensions = [];
                     // Get Extensions linked to attributes/object
                     if (!string.IsNullOrEmpty(inheritedExtension.value.GetString()))
                     {
                         XmlSerializer serializerExtensions = new XmlSerializer(typeof(ExtensionInfo));
+                        var testDebug = inheritedExtension.value.GetString();
                         StringReader readerExtensions = new StringReader(inheritedExtension.value.GetString());
                         resultInheritedExtensions = serializerExtensions.Deserialize(readerExtensions) as ExtensionInfo;
                         if (resultInheritedExtensions != null)
