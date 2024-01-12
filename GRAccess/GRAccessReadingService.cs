@@ -40,14 +40,6 @@ namespace MXAccesRestAPI.GRAccess
             stopwatch.Start();
 
 
-            Console.WriteLine("Starting GR Reading Service...");
-            IGalaxy? galaxy = RetrieveGalaxy();
-            if (galaxy == null)
-            {
-                Console.WriteLine("Cannot retrieve the galaxy.");
-                return Task.CompletedTask;
-            }
-
             Console.WriteLine("Getting runtime objects...");
 
             List<string> instancesTagNames = new List<string>();
@@ -57,8 +49,9 @@ namespace MXAccesRestAPI.GRAccess
                 instancesTagNames = dbContext.GetRuntimeObjectInstances();
             }
 
+            // Register to _Attributed
             Console.WriteLine("Found " + instancesTagNames.Count + " variables to register...");
-            GetUDAInfo(galaxy, instancesTagNames.ToArray());
+            GetUDAInfo(instancesTagNames.ToArray());
 
             Console.WriteLine("Finished loading data...");
 
@@ -95,80 +88,92 @@ namespace MXAccesRestAPI.GRAccess
             return galaxy;
         }
 
-        private void GetUDAInfo(IGalaxy galaxy, ArraySegment<string> tag_names, EgObjectIsTemplateOrInstance objectType, int thread)
-        {
-            try
-            {
-                UDAInfo? resultUDA = null;
-                UDAInfo? resultInheritedUDA = null;
+        // private void GetUDAInfo(IGalaxy galaxy, ArraySegment<string> tag_names, EgObjectIsTemplateOrInstance objectType, int thread)
+        // {
+        //     Console.WriteLine("Wait what? ");
+        //     try
+        //     {
+        //         UDAInfo? resultUDA = null;
+        //         UDAInfo? resultInheritedUDA = null;
 
-                IgObjects instances = galaxy.QueryObjectsByName(EgObjectIsTemplateOrInstance.gObjectIsInstance, tag_names.ToArray());
-                foreach (IgObject item in instances)
-                {
-                    IAttribute udaInfo = item.Attributes["UDAs"];
-                    IAttribute inheritedUdaInfo = item.Attributes["_InheritedUDAs"];
-                    string fullRefName;
+        //         IgObjects instances = galaxy.QueryObjectsByName(EgObjectIsTemplateOrInstance.gObjectIsInstance, tag_names.ToArray());
+        //         foreach (IgObject item in instances)
+        //         {
 
-                    if (!string.IsNullOrEmpty(udaInfo.value.GetString()))
-                    {
-                        XmlSerializer serializerUDA = new XmlSerializer(typeof(UDAInfo));
-                        StringReader readerUDA = new StringReader(udaInfo.value.GetString());
-                        resultUDA = serializerUDA.Deserialize(readerUDA) as UDAInfo;
-                        foreach (var attr in resultUDA.Attributes)
-                        {
-                            fullRefName = item.Tagname + "." + attr.Name;
-                            _mxDataHolder.AddItem(new MXAttribute { TagName = fullRefName });
-                            attrCount++;
-                        }
-                    }
 
-                    if (!string.IsNullOrEmpty(inheritedUdaInfo.value.GetString()))
-                    {
-                        XmlSerializer serializerInheritedUDA = new XmlSerializer(typeof(UDAInfo));
-                        StringReader readerInheritedUDA = new StringReader(inheritedUdaInfo.value.GetString());
-                        resultInheritedUDA = (UDAInfo)serializerInheritedUDA.Deserialize(readerInheritedUDA);
-                        foreach (UDAAttribute attr in resultInheritedUDA.Attributes)
-                        {
-                            fullRefName = item.Tagname + "." + attr.Name;
-                            _mxDataHolder.AddItem(new MXAttribute { TagName = fullRefName });
-                            attrCount++;
-                        }
-                    }
-                    item.Unload();
-                }
-            }
-            catch (System.Exception ex)
-            {
-                Console.WriteLine("EXCEPTION - " + ex.ToString());
-            }
-        }
+        //             string fullRefName;
+
+        //             string attr_list_str = "";
+
+        //             // foreach (IAttribute attr in item.Attributes)
+        //             // {
+        //             //     if (attr.Name == "_Attributes") attr_list_str = attr.value.GetString();
+        //             // }
+        //             IAttribute attr = item.Attributes["_Attributes"];
+        //             Console.WriteLine(attr.value.GetString());
+
+        //             string[] attr_list = attr_list_str.Split(',');
+
+        //             foreach (string attr_str in attr_list)
+        //             {
+        //                 fullRefName = item.Tagname + "." + attr;
+        //                 Console.WriteLine("Registering " + fullRefName);
+
+        //                 _mxDataHolder.AddItem(new MXAttribute { TagName = fullRefName });
+        //                 attrCount++;
+        //             }
+
+        //             // IAttribute udaInfo = item.Attributes["UDAs"];
+        //             // IAttribute inheritedUdaInfo = item.Attributes["_InheritedUDAs"];
+        //             // string fullRefName;
+
+        //             // if (!string.IsNullOrEmpty(udaInfo.value.GetString()))
+        //             // {
+        //             //     XmlSerializer serializerUDA = new XmlSerializer(typeof(UDAInfo));
+        //             //     StringReader readerUDA = new StringReader(udaInfo.value.GetString());
+        //             //     resultUDA = serializerUDA.Deserialize(readerUDA) as UDAInfo;
+        //             //     foreach (var attr in resultUDA.Attributes)
+        //             //     {
+        //             //         fullRefName = item.Tagname + "." + attr.Name;
+        //             //         _mxDataHolder.AddItem(new MXAttribute { TagName = fullRefName });
+        //             //         attrCount++;
+        //             //     }
+        //             // }
+
+        //             // if (!string.IsNullOrEmpty(inheritedUdaInfo.value.GetString()))
+        //             // {
+        //             //     XmlSerializer serializerInheritedUDA = new XmlSerializer(typeof(UDAInfo));
+        //             //     StringReader readerInheritedUDA = new StringReader(inheritedUdaInfo.value.GetString());
+        //             //     resultInheritedUDA = (UDAInfo)serializerInheritedUDA.Deserialize(readerInheritedUDA);
+        //             //     foreach (UDAAttribute attr in resultInheritedUDA.Attributes)
+        //             //     {
+        //             //         fullRefName = item.Tagname + "." + attr.Name;
+        //             //         _mxDataHolder.AddItem(new MXAttribute { TagName = fullRefName });
+        //             //         attrCount++;
+        //             //     }
+        //             // }
+        //             item.Unload();
+        //         }
+        //     }
+        //     catch (System.Exception ex)
+        //     {
+        //         Console.WriteLine("EXCEPTION - " + ex.ToString());
+        //     }
+        // }
 
         /// <summary>
-        /// Creates n number of threads and makes as many api calls to GR access to all instances to get the attributes configuration.
-        /// I do this rather than one single query because it reduces the execution time by 25% approx. 
         /// </summary>
         /// <param name="galaxy"></param>
-        /// <param name="tag_name"></param>
-        public void GetUDAInfo(IGalaxy galaxy, string[] tag_name)
+        /// <param name="tag_names"></param>
+        public void GetUDAInfo(string[] tag_names)
         {
-            int numberOfThreads = 10;
 
-            if (numberOfThreads < tag_name.Length) numberOfThreads = 1;
-            int segmentSize = tag_name.Length / numberOfThreads;
-            Task[] tasks = new Task[numberOfThreads];
-
-            for (int i = 0; i < numberOfThreads; i++)
+            foreach (string tag_name in tag_names)
             {
-                int thid = i;
-                int segmentStart = i * segmentSize;
-                int segmentEnd = (i == numberOfThreads - 1) ? tag_name.Length : segmentStart + segmentSize;
-                ArraySegment<string> segment = new ArraySegment<string>(tag_name, segmentStart, segmentEnd - segmentStart);
-                tasks[i] = Task.Run(() => GetUDAInfo(galaxy, segment, EgObjectIsTemplateOrInstance.gObjectIsInstance, thid));
+                string fullRefName = tag_name + "._Attributes";
+                _mxDataHolder.AddItem(new MXAttribute { TagName = fullRefName });
+                attrCount++;
             }
-
-            // Wait for all tasks to complete
-            Task.WaitAll(tasks);
-
             _mxDataHolder.AdviseAll();
         }
     }

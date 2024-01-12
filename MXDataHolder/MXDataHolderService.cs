@@ -49,6 +49,25 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <summary>
         /// 
         /// </summary>
+        /// <param name="tagName"></param>
+        public void AdviseDevice(string device_name)
+        {
+
+            var items = _dataStore.Where(a => a.Value.TagName.StartsWith(device_name)).Select(a => a);
+            foreach (var item in items )
+            {
+                if (!item.Value.OnAdvise)
+                {
+                    LMX_Server.Advise(hLMX, item.Key);
+                    item.Value.OnAdvise = true;
+                }
+            }
+
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
         public void AdviseAll()
         {
 
@@ -250,6 +269,28 @@ namespace MXAccesRestAPI.MXDataHolder
             return (LMX_Server != null) && (hLMX != 0);
         }
 
+
+        private void RegisterAttributes(string tag_name, string[] all_attributes)
+        {
+            if (String.IsNullOrEmpty(tag_name)) return;
+            string full_tag_name;
+
+            string[] allowedAttributes = { "InAlarm" };
+
+            var attributes = all_attributes
+              .Where(attribute => !attribute.Contains(".") || allowedAttributes.Contains(attribute))
+              .ToArray();
+
+            foreach (string attribute in attributes)
+            {
+                if (attribute.StartsWith("_")) continue;
+
+                full_tag_name = tag_name + "." + attribute;
+                AddItem(new MXAttribute { TagName = full_tag_name });
+            }
+            AdviseDevice(tag_name);
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -268,15 +309,25 @@ namespace MXAccesRestAPI.MXDataHolder
                 {
                     try
                     {
-                        _dataStore[phItemHandle].Quality = pwItemQuality;
-
-                        DateTime dateValue;
-                        if (DateTime.TryParse(pftItemTimeStamp.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out dateValue))
+                        if (_dataStore[phItemHandle].TagName.EndsWith("._Attributes"))
                         {
-                            _dataStore[phItemHandle].TimeStamp = dateValue;
-                        }
+                        
+                            string[] tag_name = _dataStore[phItemHandle].TagName.Split('.');
+                            string[] attr_list = ((string[])pvItemValue);
+                            RegisterAttributes(tag_name[0], attr_list);
+                            RemoveData(_dataStore[phItemHandle].TagName);
+                        } else
+                        {
+                            _dataStore[phItemHandle].Quality = pwItemQuality;
 
-                        _dataStore[phItemHandle].Value = pvItemValue;
+                            DateTime dateValue;
+                            if (DateTime.TryParse(pftItemTimeStamp.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out dateValue))
+                            {
+                                _dataStore[phItemHandle].TimeStamp = dateValue;
+                            }
+
+                            _dataStore[phItemHandle].Value = pvItemValue;
+                        }
                     }
                     catch (System.Exception ex)
                     {

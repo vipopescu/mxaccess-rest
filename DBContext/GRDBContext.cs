@@ -100,6 +100,7 @@ public partial class GRDBContext : DbContext
         return Gobjects
                 .Where(g => !g.IsTemplate && g.NamespaceId == 1)
                 .Select(g => g.TagName)
+                .Distinct()
                 .ToList();
     }
 }
