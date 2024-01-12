@@ -111,6 +111,11 @@ namespace MXAccesRestAPI.GRAccess
                     IAttribute inheritedUdaInfo = item.Attributes["_InheritedUDAs"];
                     IAttribute inheritedExtension = item.Attributes["_InheritedExtensions"];
 
+                    Console.WriteLine($"{item.Tagname} | udaInfo : [{inheritedUdaInfo}]");
+                    Console.WriteLine($"{item.Tagname} | _InheritedUDAs : [{inheritedUdaInfo}]");
+                    Console.WriteLine($"{item.Tagname} | _InheritedExtensions : [{inheritedExtension}]");
+                    Console.WriteLine();
+
 
                     Dictionary<string, IExtensions> availableExtensions = [];
                     // Get Extensions linked to attributes/object
@@ -137,10 +142,7 @@ namespace MXAccesRestAPI.GRAccess
                                                 Priority = item.Attributes["Priority"].value.GetString(),
                                             };
 
-                                            // availableExtensions.Add(ext.Name, new AlarmExtension
-                                            // {
-                                            //     ActiveAlarmState = true
-                                            // });
+                                            availableExtensions.Add(ext.Name, alarm);
                                             var debug = 5;
                                             break;
                                         case "inputoutputextension":
@@ -169,6 +171,10 @@ namespace MXAccesRestAPI.GRAccess
                         }
                     }
 
+                    // // DEBUG
+                    item.Unload();
+                    continue;
+
                     // TODO: 
                     // create Map <attrName, IExtensions>
                     // foreach inherited extension
@@ -194,11 +200,6 @@ namespace MXAccesRestAPI.GRAccess
                     // // set "static" values in Extensions
 
 
-                    // // DEBUG
-                    // item.Unload();
-                    // continue;
-
-
                     string fullRefName;
 
                     if (!string.IsNullOrEmpty(udaInfo.value.GetString()))
@@ -217,6 +218,7 @@ namespace MXAccesRestAPI.GRAccess
 
 
                             }
+
 
 
                             fullRefName = item.Tagname + "." + attr.Name;
