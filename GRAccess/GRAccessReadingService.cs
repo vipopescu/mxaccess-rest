@@ -107,20 +107,27 @@ namespace MXAccesRestAPI.GRAccess
                 foreach (IgObject item in instances)
                 {
 
+
+                    List<string> attrNames = [];
+                    foreach (IAttribute attr in item.Attributes)
+                    {
+                        attrNames.Add(attr.Name);
+                    }
+
+
                     IAttribute udaInfo = item.Attributes["UDAs"];
                     IAttribute inheritedUdaInfo = item.Attributes["_InheritedUDAs"];
                     IAttribute inheritedExtension = item.Attributes["_InheritedExtensions"];
 
-                    Console.WriteLine($"{item.Tagname} | udaInfo : [{inheritedUdaInfo.value.GetString()}]");
-                    Console.WriteLine($"{item.Tagname} | _InheritedUDAs : [{inheritedUdaInfo.value.GetString()}]");
-                    Console.WriteLine($"{item.Tagname} | _InheritedExtensions : [{inheritedExtension.value.GetString()}]");
-                    Console.WriteLine();
+                    Console.WriteLine(attrNames.ToString());
 
-                    if (inheritedExtension.value.GetString().Contains("alarmextension"))
-                    {
-                        Console.WriteLine("");
-                    }
-                    Dictionary<string, IExtensions> availableExtensions = [];
+
+                    // Console.WriteLine($"{item.Tagname} | udaInfo : [{inheritedUdaInfo.value.GetString()}]");
+                    // Console.WriteLine($"{item.Tagname} | _InheritedUDAs : [{inheritedUdaInfo.value.GetString()}]");
+                    // Console.WriteLine($"{item.Tagname} | _InheritedExtensions : [{inheritedExtension.value.GetString()}]");
+                    Console.WriteLine("--------------------------\n");
+
+                    Dictionary<string, List<IExtensions>> availableExtensions = [];
                     // Get Extensions linked to attributes/object
                     if (!string.IsNullOrEmpty(inheritedExtension.value.GetString()))
                     {
@@ -134,26 +141,39 @@ namespace MXAccesRestAPI.GRAccess
                             {
                                 foreach (ExtensionAttribute ext in inheritedExt.Extensions)
                                 {
+                                    List<IExtensions>? value; // out value
                                     switch (ext.ExtensionType)
                                     {
                                         case "alarmextension":
-                                            var test = item.Attributes["ActiveAlarmState"];
-                                            var test2 = item.Attributes["ActiveAlarmState"].value;
+                                           
                                             var alarm = new AlarmExtension
                                             {
-                                                ActiveAlarmState = item.Attributes["ActiveAlarmState"].value.GetBoolean(),
-                                                Description = item.Attributes["Description"].value.GetString(),
-                                                Priority = item.Attributes["Priority"].value.GetString(),
+                                                ActiveAlarmState = item.Attributes[ext.Name + ".ActiveAlarmState"].value.GetBoolean(),
+                                                Description = item.Attributes[ext.Name + ".Description"].value.GetString(),
+                                                Priority = item.Attributes[ext.Name + ".Priority"].value.GetString(),
                                             };
 
-                                            availableExtensions.Add(ext.Name, alarm);
-                                            var debug = 5;
+
+                                            if (availableExtensions.TryGetValue(ext.Name, out value))
+                                            {
+                                                value.Add(alarm);
+                                            }
+                                            else
+                                            {
+                                                availableExtensions.Add(ext.Name, [alarm]);
+                                            }
+
                                             break;
                                         case "inputoutputextension":
-                                            // TODO;
-                                            availableExtensions.Add(ext.Name, new IOExtension
+                                            IOExtension iOExtension = new();
+                                            if (availableExtensions.TryGetValue(ext.Name, out value))
                                             {
-                                            });
+                                                value.Add(iOExtension);
+                                            }
+                                            else
+                                            {
+                                                availableExtensions.Add(ext.Name, [iOExtension]);
+                                            }
                                             break;
 
                                         case "booleanextension":
@@ -161,10 +181,15 @@ namespace MXAccesRestAPI.GRAccess
                                             break;
                                         case "historyextension":
                                             // TODO;
-                                            availableExtensions.Add(ext.Name, new HistExtension
+                                            HistExtension histExtension = new();
+                                            if (availableExtensions.TryGetValue(ext.Name, out value))
                                             {
-
-                                            });
+                                                value.Add(histExtension);
+                                            }
+                                            else
+                                            {
+                                                availableExtensions.Add(ext.Name, [histExtension]);
+                                            }
                                             break;
 
                                         default: break;
