@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using MXAccesRestAPI.Classes;
@@ -12,13 +13,26 @@ namespace MXAccesRestAPI
     {
         private static void Main(string[] args)
         {
+            string appEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+
+
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.Configure<GalaxySettings>(builder.Configuration.GetSection("GalaxySettings"));
+
 
             builder.Services.AddDbContext<GRDBContext>(options =>
                            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            builder.Services.AddSingleton<IMXDataHolderService>(new MXDataHolderService("RESTAPI-AVEVA"));
+            builder.Configuration.AddJsonFile($"appsettings.{appEnv}.json", optional: true);
+
+            string? attributeConfPath = builder.Configuration.GetValue<string>("AttributeConfigPath");
+            if (string.IsNullOrEmpty(attributeConfPath))
+            {
+                throw new InvalidOperationException($"Attribute Config not found: {attributeConfPath}");
+            }
+
+            string serverName = builder.Configuration.GetValue<string>("ServerName") ?? "";
+            builder.Services.AddSingleton<IMXDataHolderService>(new MXDataHolderService(serverName, []));
 
             builder.Services.AddHostedService<GRAccessReadingService>();
 
