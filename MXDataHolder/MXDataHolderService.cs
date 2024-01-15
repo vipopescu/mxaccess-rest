@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Globalization;
 using ArchestrA.GRAccess;
@@ -295,8 +296,9 @@ namespace MXAccesRestAPI.MXDataHolder
             string full_tag_name;
 
             var attributes = all_attributes
-              .Where(attribute => !attribute.Contains('.') || _allowedAttributes.Contains(attribute))
-              .ToArray();
+              .Where(attribute => !attribute.Contains('.') || _allowedAttributes.Where(allowedAttr => attribute.Contains(allowedAttr)).ToArray().Length > 0 )
+              .ToArray() ?? [];
+               
 
             foreach (string attribute in attributes)
             {
