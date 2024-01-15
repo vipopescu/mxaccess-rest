@@ -3,22 +3,46 @@ using MXAccesRestAPI.MXDataHolder;
 
 namespace MXAccesRestAPI.Monitoring
 {
-    public class AlarmMonitor
+    public class AlarmMonitor(IMXDataHolderService dataHolderService) : IDataStoreMonitor, IDisposable
     {
-        private readonly MXDataHolderService _dataHolderService;
 
-        public AlarmMonitor(MXDataHolderService dataHolderService)
+
+        private readonly IMXDataHolderService _dataHolderService = dataHolderService;
+
+        private bool isActive = false;
+
+
+        ~AlarmMonitor()
         {
-            _dataHolderService = dataHolderService;
+            Dispose();
+        }
 
+        public void Dispose()
+        {
+            StopMonitoring();
+            GC.SuppressFinalize(this);
+        }
+
+        public bool IsMonitoringActive()
+        {
+            return isActive;
+        }
+
+        public void StartMonitoring()
+        {
             // Subscribing to the OnDataStoreChanged event
             _dataHolderService.OnDataStoreChanged += DataHolderService_OnDataStoreChanged;
+            isActive = true;
+        }
+
+        public void StopMonitoring()
+        {
+            _dataHolderService.OnDataStoreChanged -= DataHolderService_OnDataStoreChanged;
+            isActive = false;
         }
 
         private void DataHolderService_OnDataStoreChanged(int key, MXAttribute data, DataStoreChangeType changeType)
         {
-            // Reacting to the data store change event
-            Console.WriteLine($"Data Store Change Detected: Key={key}, ChangeType={changeType}");
 
             // Additional logic based on the type of change
             switch (changeType)
@@ -34,5 +58,7 @@ namespace MXAccesRestAPI.Monitoring
                     break;
             }
         }
+
+
     }
 }
