@@ -2,8 +2,17 @@ using MXAccesRestAPI.Classes;
 
 namespace MXAccesRestAPI.MXDataHolder
 {
+    // Enum for data store change types
+    public enum DataStoreChangeType { ADDED, REMOVED, MODIFIED };
+
     public interface IMXDataHolderService
     {
+        // Delegate for data store changes
+        delegate void DataStoreChangeEventHandler(int key, MXAttribute data, DataStoreChangeType changeType);
+
+        // Event for data store changes
+        event DataStoreChangeEventHandler OnDataStoreChanged;
+
         void AddItem(MXAttribute item);
         void Advise(string tagName);
         void AdviseAll();
@@ -15,7 +24,7 @@ namespace MXAccesRestAPI.MXDataHolder
         List<MXAttribute> GetAllData();
         bool RemoveData(int key);
         bool RemoveData(string fullattrName);
-        public void WriteData(string fullattrName, object value, DateTime? timeStamp);
-        public int GetCount();
+        void WriteData(string fullattrName, object value, DateTime? timeStamp);
+        int GetCount();
     }
 }

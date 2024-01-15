@@ -1,21 +1,29 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using ArchestrA.GRAccess;
 using ArchestrA.MxAccess;
 using MXAccesRestAPI.Classes;
 using MXAccesRestAPI.Global;
+using static MXAccesRestAPI.MXDataHolder.IMXDataHolderService;
 
 namespace MXAccesRestAPI.MXDataHolder
 {
+
     public class MXDataHolderService : IMXDataHolderService
     {
 
-        // Attributes (ie: InAlarm)
+
+        // Event for data store changes
+        public event DataStoreChangeEventHandler? OnDataStoreChanged;
+
         private static readonly List<string> _allowedAttributes = [];
         private ConcurrentDictionary<int, MXAttribute> _dataStore;
         private static LMXProxyServerClass _LMX_Server = new();
 
-        public int hLMX;
 
+
+
+        public int hLMX;
         public int userLMX;
         public string ServerName;
 
@@ -100,6 +108,8 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 int key = _LMX_Server.AddItem(hLMX, item.TagName);
                 _dataStore.TryAdd(key, item);
+                NotifyDataStoreChange(key, item, DataStoreChangeType.ADDED);
+
             }
         }
 
@@ -118,6 +128,7 @@ namespace MXAccesRestAPI.MXDataHolder
                     {
                         int key = _LMX_Server.AddItem(hLMX, item.TagName);
                         _dataStore.TryAdd(key, item);
+                        NotifyDataStoreChange(key, item, DataStoreChangeType.ADDED);
                     }
                 }
             }
@@ -192,27 +203,34 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 _LMX_Server.RemoveItem(hLMX, item.Key);
                 _dataStore.TryRemove(item);
+                NotifyDataStoreChange(item.Key, item.Value, DataStoreChangeType.REMOVED);
+
             }
             return true;
         }
 
         /// <summary>
-        /// Removes a specific tag's data from the data store by index
+        /// Removes a specific tag's data from the data store by id
         /// </summary>
-        /// <param name="index"></param>
+        /// <param name="id"></param>
         /// <returns></returns> <summary>
         /// 
         /// </summary>
-        /// <param name="index"></param>
+        /// <param name="id"></param>
         /// <returns></returns>
-        public bool RemoveData(int index)
+        public bool RemoveData(int id)
         {
-            if (_dataStore[index].OnAdvise)
+            if (_dataStore[id].OnAdvise)
             {
-                Unadvise(_dataStore[index].TagName);
+                Unadvise(_dataStore[id].TagName);
             }
-            _LMX_Server.RemoveItem(hLMX, index);
-            _dataStore.TryRemove(index, out var valueRemoved);
+            _LMX_Server.RemoveItem(hLMX, id);
+            _dataStore.TryRemove(id, out var valueRemoved);
+            if (valueRemoved != null)
+            {
+                NotifyDataStoreChange(id, valueRemoved, DataStoreChangeType.REMOVED);
+            }
+
             return true;
         }
 
@@ -326,8 +344,9 @@ namespace MXAccesRestAPI.MXDataHolder
                             {
                                 _dataStore[phItemHandle].TimeStamp = dateValue;
                             }
-
                             _dataStore[phItemHandle].Value = pvItemValue;
+
+                            NotifyDataStoreChange(phItemHandle, _dataStore[phItemHandle], DataStoreChangeType.MODIFIED);
                         }
                     }
                     catch (System.Exception ex)
@@ -379,6 +398,17 @@ namespace MXAccesRestAPI.MXDataHolder
                 _LMX_Server = new LMXProxyServerClass();
                 hLMX = 0;
             }
+        }
+
+        /// <summary>
+        /// Raise the event when data is updated
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="data"></param>
+        /// <param name="changeType"></param>
+        private void NotifyDataStoreChange(int key, MXAttribute data, DataStoreChangeType changeType)
+        {
+            OnDataStoreChanged?.Invoke(key, data, changeType);
         }
 
         /// <summary>
