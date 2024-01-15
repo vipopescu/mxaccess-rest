@@ -61,7 +61,7 @@ namespace MXAccesRestAPI.Monitoring
                     Console.WriteLine($"REMOVED  [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.MODIFIED:
-                    Console.WriteLine($"MODIFIED [ {data.TagName} ]");
+                    Console.WriteLine($"MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
                     break;
             }
         }
