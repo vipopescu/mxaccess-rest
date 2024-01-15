@@ -43,7 +43,7 @@ namespace MXAccesRestAPI
 
 
             // Register DataStoreMonitor as a Singleton and use the same instance of MXDataHolderService
-            builder.Services.AddSingleton<AlarmMonitor>(new AlarmMonitor(mxDataHolderService));
+            builder.Services.AddSingleton<AlarmDataMonitor>(new AlarmDataMonitor(mxDataHolderService));
 
 
             builder.Services.AddControllers().AddJsonOptions(options =>

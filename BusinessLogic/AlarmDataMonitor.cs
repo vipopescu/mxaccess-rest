@@ -3,7 +3,7 @@ using MXAccesRestAPI.MXDataHolder;
 
 namespace MXAccesRestAPI.Monitoring
 {
-    public class AlarmMonitor : IDataStoreMonitor, IDisposable
+    public class AlarmDataMonitor : IDataStoreMonitor, IDisposable
     {
 
 
@@ -13,13 +13,13 @@ namespace MXAccesRestAPI.Monitoring
         private bool isActive = false;
 
 
-        public AlarmMonitor(IMXDataHolderService dataHolderService) { 
+        public AlarmDataMonitor(IMXDataHolderService dataHolderService) { 
 
             _dataHolderService = dataHolderService;
             StartMonitoring();
         }
 
-        ~AlarmMonitor()
+        ~AlarmDataMonitor()
         {
             Dispose();
         }
