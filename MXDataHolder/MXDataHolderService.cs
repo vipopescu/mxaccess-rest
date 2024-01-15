@@ -19,10 +19,10 @@ namespace MXAccesRestAPI.MXDataHolder
         public int userLMX;
         public string ServerName;
 
-        public MXDataHolderService(string serverName, List<string> allowedTagAttributes)
+        public MXDataHolderService(string serverName, List<string> allowedAttributes)
         {
             _dataStore = new ConcurrentDictionary<int, MXAttribute>();
-            _allowedAttributes.AddRange(allowedTagAttributes);
+            _allowedAttributes.AddRange(allowedAttributes);
             hLMX = 0;
             ServerName = serverName;
             userLMX = 0;

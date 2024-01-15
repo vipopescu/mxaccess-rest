@@ -15,7 +15,7 @@ namespace MXAccesRestAPI
         private static void Main(string[] args)
         {
             string appEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
-    string basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
+            string basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
 
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.Configure<GalaxySettings>(builder.Configuration.GetSection("GalaxySettings"));
@@ -32,11 +32,10 @@ namespace MXAccesRestAPI
                 throw new InvalidOperationException($"Attribute Config not found: {attributeConfPath}");
             }
 
-    
             AttributeConfigSettings attributeConfig =
-                JsonSerializer.Deserialize<AttributeConfigSettings>(Path.Combine(basePath, attributeConfPath)) ?? throw new InvalidOperationException($"Attribute Config error: {attributeConfPath}");
-            
-            
+                JsonSerializer.Deserialize<AttributeConfigSettings>(File.ReadAllText(Path.Combine(basePath, attributeConfPath))) ?? throw new InvalidOperationException($"Attribute Config error: {attributeConfPath}");
+
+
             string serverName = builder.Configuration.GetValue<string>("ServerName") ?? "";
 
             builder.Services.AddSingleton<IMXDataHolderService>(new MXDataHolderService(serverName, attributeConfig.AllowedTagAttributes));
