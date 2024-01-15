@@ -7,6 +7,7 @@ using MXAccesRestAPI.Settings;
 using MXAccess_RestAPI.DBContext;
 using System.Text.Json;
 using MXAccesRestAPI.Classes;
+using MXAccesRestAPI.Monitoring;
 
 namespace MXAccesRestAPI
 {
@@ -16,16 +17,14 @@ namespace MXAccesRestAPI
         {
             string appEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
             string basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
-
             var builder = WebApplication.CreateBuilder(args);
+
+            // Settings & Config
+            string serverName = builder.Configuration.GetValue<string>("ServerName") ?? "";
             builder.Services.Configure<GalaxySettings>(builder.Configuration.GetSection("GalaxySettings"));
-
-
-            builder.Services.AddDbContext<GRDBContext>(options =>
-                           options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
             builder.Configuration.AddJsonFile($"appsettings.{appEnv}.json", optional: true);
 
+            // Attribute Tag configuration
             string? attributeConfPath = builder.Configuration.GetValue<string>("AttributeConfigPath");
             if (string.IsNullOrEmpty(attributeConfPath))
             {
@@ -36,15 +35,24 @@ namespace MXAccesRestAPI
                 JsonSerializer.Deserialize<AttributeConfigSettings>(File.ReadAllText(Path.Combine(basePath, attributeConfPath))) ?? throw new InvalidOperationException($"Attribute Config error: {attributeConfPath}");
 
 
-            string serverName = builder.Configuration.GetValue<string>("ServerName") ?? "";
-
-            builder.Services.AddSingleton<IMXDataHolderService>(new MXDataHolderService(serverName, attributeConfig.AllowedTagAttributes));
+            // Adding services
+            var mxDataHolderService = new MXDataHolderService(serverName, attributeConfig.AllowedTagAttributes);
+            builder.Services.AddSingleton<IMXDataHolderService>(mxDataHolderService);
             builder.Services.AddHostedService<GRAccessReadingService>();
+            builder.Services.AddDbContext<GRDBContext>(options =>
+                           options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+
+            // Register DataStoreMonitor as a Singleton and use the same instance of MXDataHolderService
+            builder.Services.AddSingleton<AlarmMonitor>(serviceProvider =>
+                new AlarmMonitor(mxDataHolderService));
+
 
             builder.Services.AddControllers().AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals;
             });
+
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
