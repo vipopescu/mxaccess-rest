@@ -12,7 +12,8 @@ namespace MXAccesRestAPI.MXDataHolder
         // Attributes (ie: InAlarm)
         private static readonly List<string> _allowedAttributes = [""];
         private ConcurrentDictionary<int, MXAttribute> _dataStore;
-        LMXProxyServerClass? LMX_Server;
+        private static LMXProxyServerClass _LMX_Server = new();
+
         public int hLMX;
 
         public int userLMX;
@@ -44,7 +45,7 @@ namespace MXAccesRestAPI.MXDataHolder
             var item = _dataStore.FirstOrDefault(a => a.Value.TagName == tagName);
             if (!item.Value.OnAdvise)
             {
-                LMX_Server.Advise(hLMX, item.Key);
+                _LMX_Server.Advise(hLMX, item.Key);
                 item.Value.OnAdvise = true;
             }
         }
@@ -61,7 +62,7 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 if (!item.Value.OnAdvise)
                 {
-                    LMX_Server.Advise(hLMX, item.Key);
+                    _LMX_Server.Advise(hLMX, item.Key);
                     item.Value.OnAdvise = true;
                 }
             }
@@ -82,7 +83,7 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 if (!item.Value.OnAdvise)
                 {
-                    LMX_Server.Advise(hLMX, item.Key);
+                    _LMX_Server.Advise(hLMX, item.Key);
                     item.Value.OnAdvise = true;
                 }
             }
@@ -97,7 +98,7 @@ namespace MXAccesRestAPI.MXDataHolder
 
             if (LXMRegistered())
             {
-                int key = LMX_Server.AddItem(hLMX, item.TagName);
+                int key = _LMX_Server.AddItem(hLMX, item.TagName);
                 _dataStore.TryAdd(key, item);
             }
         }
@@ -115,7 +116,7 @@ namespace MXAccesRestAPI.MXDataHolder
                 {
                     if (item.TagName != null)
                     {
-                        int key = LMX_Server.AddItem(hLMX, item.TagName);
+                        int key = _LMX_Server.AddItem(hLMX, item.TagName);
                         _dataStore.TryAdd(key, item);
                     }
                 }
@@ -140,7 +141,7 @@ namespace MXAccesRestAPI.MXDataHolder
             var item = _dataStore.FirstOrDefault(a => a.Value.TagName == value);
             if (item.Value != null && item.Value.OnAdvise)
             {
-                LMX_Server.UnAdvise(hLMX, item.Key);
+                _LMX_Server.UnAdvise(hLMX, item.Key);
                 item.Value.OnAdvise = false;
             }
         }
@@ -153,7 +154,7 @@ namespace MXAccesRestAPI.MXDataHolder
         {
             if (_dataStore[index].OnAdvise)
             {
-                LMX_Server.UnAdvise(hLMX, index);
+                _LMX_Server.UnAdvise(hLMX, index);
                 _dataStore[index].OnAdvise = false;
             }
         }
@@ -187,9 +188,9 @@ namespace MXAccesRestAPI.MXDataHolder
                 Unadvise(tagName);
             }
 
-            if (_dataStore.Count != 0)
+            if (!_dataStore.IsEmpty)
             {
-                LMX_Server.RemoveItem(hLMX, item.Key);
+                _LMX_Server.RemoveItem(hLMX, item.Key);
                 _dataStore.TryRemove(item);
             }
             return true;
@@ -210,7 +211,7 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 Unadvise(_dataStore[index].TagName);
             }
-            LMX_Server.RemoveItem(hLMX, index);
+            _LMX_Server.RemoveItem(hLMX, index);
             _dataStore.TryRemove(index, out var valueRemoved);
             return true;
         }
@@ -223,12 +224,11 @@ namespace MXAccesRestAPI.MXDataHolder
         {
             try
             {
-                LMX_Server ??= new ArchestrA.MxAccess.LMXProxyServerClass();
 
-                if ((LMX_Server != null) && (hLMX == 0))
+                if ((_LMX_Server != null) && (hLMX == 0))
                 {
-                    hLMX = LMX_Server.Register(ServerName);
-                    LMX_Server.OnDataChange += new _ILMXProxyServerEvents_OnDataChangeEventHandler(LMX_OnDataChange);
+                    hLMX = _LMX_Server.Register(ServerName);
+                    _LMX_Server.OnDataChange += new _ILMXProxyServerEvents_OnDataChangeEventHandler(LMX_OnDataChange);
                     _dataStore = new ConcurrentDictionary<int, MXAttribute>();
                 }
             }
@@ -246,7 +246,7 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 if (LXMRegistered())
                 {
-                    userLMX = LMX_Server.AuthenticateUser(hLMX, "vipopescu", "");
+                    userLMX = _LMX_Server.AuthenticateUser(hLMX, "vipopescu", "");
                 }
             }
             catch (System.Exception ex)
@@ -262,7 +262,7 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <returns></returns>
         public bool LXMRegistered()
         {
-            return (LMX_Server != null) && (hLMX != 0);
+            return (_LMX_Server != null) && (hLMX != 0);
         }
 
 
@@ -356,11 +356,11 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 if (timeStamp != null)
                 {
-                    LMX_Server.Write2(hLMX, item.Key, value.ToString(), timeStamp, userLMX);
+                    _LMX_Server.Write2(hLMX, item.Key, value.ToString(), timeStamp, userLMX);
                 }
                 else
                 {
-                    LMX_Server.Write(hLMX, item.Key, value.ToString(), userLMX);
+                    _LMX_Server.Write(hLMX, item.Key, value.ToString(), userLMX);
                 }
             }
         }
@@ -370,13 +370,13 @@ namespace MXAccesRestAPI.MXDataHolder
         /// </summary>
         public void Unregister()
         {
-            if ((LMX_Server != null) && (hLMX != 0))
+            if ((_LMX_Server != null) && (hLMX != 0))
             {
                 UnAdviseAll();
                 RemoveAll();
 
-                LMX_Server.Unregister(hLMX);
-                LMX_Server = null;
+                _LMX_Server.Unregister(hLMX);
+                _LMX_Server = new LMXProxyServerClass();
                 hLMX = 0;
             }
         }
