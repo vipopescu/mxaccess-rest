@@ -1,11 +1,12 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
-using MXAccesRestAPI.Classes;
 using MXAccesRestAPI.GRAccess;
 using MXAccesRestAPI.MXDataHolder;
 using MXAccesRestAPI.Settings;
 using MXAccess_RestAPI.DBContext;
+using System.Text.Json;
+using MXAccesRestAPI.Classes;
 
 namespace MXAccesRestAPI
 {
@@ -31,18 +32,14 @@ namespace MXAccesRestAPI
                 throw new InvalidOperationException($"Attribute Config not found: {attributeConfPath}");
             }
 
+    
+            AttributeConfigSettings attributeConfig =
+                JsonSerializer.Deserialize<AttributeConfigSettings>(Path.Combine(basePath, attributeConfPath)) ?? throw new InvalidOperationException($"Attribute Config error: {attributeConfPath}");
             
-            // TODO: load json file & add into MXDataHolderService
-
-
-            // builder.Configuration.AddJsonFile(Path.Combine(basePath, attributeConfPath));
-            // // Inject settings to global config
-            // var attribiteConfig = builder.Configuration.GetSection(nameof(AttributeConfigSettings)) ?? throw new InvalidOperationException($"Error openning attibute config file");
-            // // DI operation settings configuration
-            // builder.Services.Configure<AttributeConfigSettings>(attribiteConfig);
-
+            
             string serverName = builder.Configuration.GetValue<string>("ServerName") ?? "";
-            builder.Services.AddSingleton<IMXDataHolderService>(new MXDataHolderService(serverName, []));
+
+            builder.Services.AddSingleton<IMXDataHolderService>(new MXDataHolderService(serverName, attributeConfig.AllowedTagAttributes));
             builder.Services.AddHostedService<GRAccessReadingService>();
 
             builder.Services.AddControllers().AddJsonOptions(options =>

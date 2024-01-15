@@ -10,7 +10,7 @@ namespace MXAccesRestAPI.MXDataHolder
     {
 
         // Attributes (ie: InAlarm)
-        private static readonly List<string> _allowedAttributes = [""];
+        private static readonly List<string> _allowedAttributes = [];
         private ConcurrentDictionary<int, MXAttribute> _dataStore;
         private static LMXProxyServerClass _LMX_Server = new();
 
@@ -19,10 +19,10 @@ namespace MXAccesRestAPI.MXDataHolder
         public int userLMX;
         public string ServerName;
 
-        public MXDataHolderService(string serverName, string[] allowedAttributes)
+        public MXDataHolderService(string serverName, List<string> allowedTagAttributes)
         {
             _dataStore = new ConcurrentDictionary<int, MXAttribute>();
-            _allowedAttributes.AddRange(allowedAttributes);
+            _allowedAttributes.AddRange(allowedTagAttributes);
             hLMX = 0;
             ServerName = serverName;
             userLMX = 0;
