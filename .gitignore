@@ -396,3 +396,11 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+
+# don't include env specific config
+appsettings.*.json
+!appsettings.example.json
+
+attributeConfig.*.json
+!attributeConfig.example.json

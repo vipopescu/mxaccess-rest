@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using MXAccesRestAPI.Classes;
@@ -12,13 +13,26 @@ namespace MXAccesRestAPI
     {
         private static void Main(string[] args)
         {
+            string appEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+
+
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.Configure<GalaxySettings>(builder.Configuration.GetSection("GalaxySettings"));
+
 
             builder.Services.AddDbContext<GRDBContext>(options =>
                            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            builder.Services.AddSingleton<IMXDataHolderService>(new MXDataHolderService("RESTAPI-AVEVA"));
+            builder.Configuration.AddJsonFile($"appsettings.{appEnv}.json", optional: true);
+
+            string? operationsFilePath = builder.Configuration.GetValue<string>("AllowedAttributes");
+            if (string.IsNullOrEmpty(operationsFilePath))
+            {
+                throw new InvalidOperationException($"Operations file path cannot be found: {operationsFilePath}");
+            }
+
+
+            builder.Services.AddSingleton<IMXDataHolderService>(new MXDataHolderService("RESTAPI-AVEVA", []));
 
             builder.Services.AddHostedService<GRAccessReadingService>();
 
