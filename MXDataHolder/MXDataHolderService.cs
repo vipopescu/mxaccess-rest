@@ -9,6 +9,8 @@ namespace MXAccesRestAPI.MXDataHolder
     public class MXDataHolderService : IMXDataHolderService
     {
 
+        // Attributes (ie: InAlarm)
+        private static readonly List<string> _allowedAttributes = [""];
         private ConcurrentDictionary<int, MXAttribute> _dataStore;
         LMXProxyServerClass? LMX_Server;
         public int hLMX;
@@ -16,9 +18,10 @@ namespace MXAccesRestAPI.MXDataHolder
         public int userLMX;
         public string ServerName;
 
-        public MXDataHolderService(string serverName)
+        public MXDataHolderService(string serverName, string[]? allowedAttributes)
         {
             _dataStore = new ConcurrentDictionary<int, MXAttribute>();
+            _allowedAttributes.AddRange(allowedAttributes ?? []);
             hLMX = 0;
             ServerName = serverName;
             userLMX = 0;
@@ -32,7 +35,7 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Subscribes to updates for a specific tag.
         /// </summary>
         /// <param name="tagName"></param>
         public void Advise(string tagName)
@@ -47,14 +50,14 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Subscribes to updates for all tags of a specific device
         /// </summary>
         /// <param name="tagName"></param>
         public void AdviseDevice(string device_name)
         {
 
             var items = _dataStore.Where(a => a.Value.TagName.StartsWith(device_name)).Select(a => a);
-            foreach (var item in items )
+            foreach (var item in items)
             {
                 if (!item.Value.OnAdvise)
                 {
@@ -66,12 +69,12 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Subscribes to updates for all tags
         /// </summary>
         public void AdviseAll()
         {
 
-            if (_dataStore.Count == 0)
+            if (_dataStore.IsEmpty)
             {
                 return;
             }
@@ -86,7 +89,7 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Add Tag to tag store
         /// </summary>
         /// <param name="item"></param>
         public void AddItem(MXAttribute item)
@@ -100,7 +103,7 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Adds a group of MXAttribute items to the data store
         /// </summary>
         /// <param name="items"></param>
         public void AddGroupItem(IEnumerable<MXAttribute> items)
@@ -120,7 +123,7 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Unsubscribes from updates for all tags
         /// </summary>
         public void UnAdviseAll()
         {
@@ -129,7 +132,7 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Unsubscribes from updates for a specific tag
         /// </summary>
         /// <param name="value"></param>
         public void Unadvise(string value)
@@ -143,7 +146,7 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Unsubscribes from updates for a specific tag by index
         /// </summary>
         /// <param name="index"></param>
         public void Unadvise(int index)
@@ -156,7 +159,7 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Removes all data from the data store and unsubscribes from updates.
         /// </summary>
         public void RemoveAll()
         {
@@ -170,11 +173,7 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="tagName"></param>
-        /// <returns></returns> <summary>
-        /// 
+        /// Removes a specific tag's data from the data store by tagname
         /// </summary>
         /// <param name="tagName"></param>
         /// <returns></returns>
@@ -197,7 +196,7 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Removes a specific tag's data from the data store by index
         /// </summary>
         /// <param name="index"></param>
         /// <returns></returns> <summary>
@@ -218,16 +217,13 @@ namespace MXAccesRestAPI.MXDataHolder
 
 
         /// <summary>
-        /// 
+        /// Registers the service
         /// </summary>
         public void Register()
         {
             try
             {
-                if (LMX_Server == null)
-                {
-                    LMX_Server = new ArchestrA.MxAccess.LMXProxyServerClass();
-                }
+                LMX_Server ??= new ArchestrA.MxAccess.LMXProxyServerClass();
 
                 if ((LMX_Server != null) && (hLMX == 0))
                 {
@@ -261,7 +257,7 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Checks if the service is registered with the LMX server
         /// </summary>
         /// <returns></returns>
         public bool LXMRegistered()
@@ -270,20 +266,23 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
 
+        /// <summary>
+        /// Registers Tag's attributes with 
+        /// </summary>
+        /// <param name="tag_name">Parent Tag name</param>
+        /// <param name="all_attributes">Tag's attributes</param>
         private void RegisterAttributes(string tag_name, string[] all_attributes)
         {
             if (String.IsNullOrEmpty(tag_name)) return;
             string full_tag_name;
 
-            string[] allowedAttributes = { "InAlarm" };
-
             var attributes = all_attributes
-              .Where(attribute => !attribute.Contains(".") || allowedAttributes.Contains(attribute))
+              .Where(attribute => !attribute.Contains('.') || _allowedAttributes.Contains(attribute))
               .ToArray();
 
             foreach (string attribute in attributes)
             {
-                if (attribute.StartsWith("_")) continue;
+                if (attribute.StartsWith('_')) continue;
 
                 full_tag_name = tag_name + "." + attribute;
                 AddItem(new MXAttribute { TagName = full_tag_name });
@@ -292,7 +291,7 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Event handler for data changes from the LMX server
         /// </summary>
         /// <param name="hLMXServerHandle"></param>
         /// <param name="phItemHandle"></param>
@@ -309,14 +308,16 @@ namespace MXAccesRestAPI.MXDataHolder
                 {
                     try
                     {
+                        // Tag's available attributes
                         if (_dataStore[phItemHandle].TagName.EndsWith("._Attributes"))
                         {
-                        
+
                             string[] tag_name = _dataStore[phItemHandle].TagName.Split('.');
-                            string[] attr_list = ((string[])pvItemValue);
+                            string[] attr_list = (string[])pvItemValue;
                             RegisterAttributes(tag_name[0], attr_list);
                             RemoveData(_dataStore[phItemHandle].TagName);
-                        } else
+                        }
+                        else
                         {
                             _dataStore[phItemHandle].Quality = pwItemQuality;
 
@@ -338,17 +339,12 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Writes data to a tag
         /// </summary>
         /// <param name="tagName"></param>
         /// <param name="value"></param>
         /// <param name="timeStamp"></param>
-        /// <exception cref="Exception"></exception> <summary>
-        /// 
-        /// </summary>
-        /// <param name="tagName"></param>
-        /// <param name="value"></param>
-        /// <param name="timeStamp"></param>
+        /// <exception cref="Exception"></exception>
         public void WriteData(string tagName, object value, DateTime? timeStamp = null)
         {
             var item = _dataStore.FirstOrDefault(a => a.Value.TagName == tagName);
@@ -370,7 +366,7 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Unregisters the service from the LMX server
         /// </summary>
         public void Unregister()
         {
@@ -386,17 +382,17 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
         /// <summary>
-        /// 
+        /// Retrieves data for a specific key
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        public MXAttribute GetData(int key)
+        public MXAttribute? GetData(int key)
         {
-            if (!_dataStore.ContainsKey(key))
+            if (!_dataStore.TryGetValue(key, out MXAttribute? value))
             {
                 return null;
             }
-            return (MXAttribute)_dataStore[key].Value;
+            return value.Value as MXAttribute;
         }
 
         /// <summary>
@@ -404,7 +400,7 @@ namespace MXAccesRestAPI.MXDataHolder
         /// </summary>
         /// <param name="tagname"></param>
         /// <returns></returns>
-        public MXAttribute GetData(string tagname)
+        public MXAttribute? GetData(string tagname)
         {
             var item = _dataStore.FirstOrDefault(a => a.Value.TagName == tagname);
             if (item.Value == null)
