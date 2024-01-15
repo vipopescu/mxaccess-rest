@@ -14,7 +14,7 @@ namespace MXAccesRestAPI
         private static void Main(string[] args)
         {
             string appEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
-
+    string basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
 
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.Configure<GalaxySettings>(builder.Configuration.GetSection("GalaxySettings"));
@@ -31,9 +31,18 @@ namespace MXAccesRestAPI
                 throw new InvalidOperationException($"Attribute Config not found: {attributeConfPath}");
             }
 
+            
+            // TODO: load json file & add into MXDataHolderService
+
+
+            // builder.Configuration.AddJsonFile(Path.Combine(basePath, attributeConfPath));
+            // // Inject settings to global config
+            // var attribiteConfig = builder.Configuration.GetSection(nameof(AttributeConfigSettings)) ?? throw new InvalidOperationException($"Error openning attibute config file");
+            // // DI operation settings configuration
+            // builder.Services.Configure<AttributeConfigSettings>(attribiteConfig);
+
             string serverName = builder.Configuration.GetValue<string>("ServerName") ?? "";
             builder.Services.AddSingleton<IMXDataHolderService>(new MXDataHolderService(serverName, []));
-
             builder.Services.AddHostedService<GRAccessReadingService>();
 
             builder.Services.AddControllers().AddJsonOptions(options =>
