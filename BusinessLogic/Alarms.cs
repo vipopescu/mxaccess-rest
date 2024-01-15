@@ -3,14 +3,21 @@ using MXAccesRestAPI.MXDataHolder;
 
 namespace MXAccesRestAPI.Monitoring
 {
-    public class AlarmMonitor(IMXDataHolderService dataHolderService) : IDataStoreMonitor, IDisposable
+    public class AlarmMonitor : IDataStoreMonitor, IDisposable
     {
 
 
-        private readonly IMXDataHolderService _dataHolderService = dataHolderService;
+
+        private readonly IMXDataHolderService _dataHolderService;
 
         private bool isActive = false;
 
+
+        public AlarmMonitor(IMXDataHolderService dataHolderService) { 
+
+            _dataHolderService = dataHolderService;
+            StartMonitoring();
+        }
 
         ~AlarmMonitor()
         {
@@ -48,13 +55,13 @@ namespace MXAccesRestAPI.Monitoring
             switch (changeType)
             {
                 case DataStoreChangeType.ADDED:
-                    Console.WriteLine($"New item added to the data store [{data.TagName}]");
+                    Console.WriteLine($"NEW      [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.REMOVED:
-                    Console.WriteLine($"Item removed from the data store [{data.TagName}]");
+                    Console.WriteLine($"REMOVED  [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.MODIFIED:
-                    Console.WriteLine($"Item updated in the data store [{data.TagName}]");
+                    Console.WriteLine($"MODIFIED [ {data.TagName} ]");
                     break;
             }
         }

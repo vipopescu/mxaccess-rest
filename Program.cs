@@ -15,14 +15,12 @@ namespace MXAccesRestAPI
     {
         private static void Main(string[] args)
         {
-            string appEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
-            string basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
+
             var builder = WebApplication.CreateBuilder(args);
 
             // Settings & Config
             string serverName = builder.Configuration.GetValue<string>("ServerName") ?? "";
             builder.Services.Configure<GalaxySettings>(builder.Configuration.GetSection("GalaxySettings"));
-            builder.Configuration.AddJsonFile($"appsettings.{appEnv}.json", optional: true);
 
             // Attribute Tag configuration
             string? attributeConfPath = builder.Configuration.GetValue<string>("AttributeConfigPath");
@@ -31,6 +29,7 @@ namespace MXAccesRestAPI
                 throw new InvalidOperationException($"Attribute Config not found: {attributeConfPath}");
             }
 
+            string basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
             AttributeConfigSettings attributeConfig =
                 JsonSerializer.Deserialize<AttributeConfigSettings>(File.ReadAllText(Path.Combine(basePath, attributeConfPath))) ?? throw new InvalidOperationException($"Attribute Config error: {attributeConfPath}");
 
