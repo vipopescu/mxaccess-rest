@@ -5,15 +5,12 @@ namespace MXAccesRestAPI.Monitoring
 {
     public class AlarmDataMonitor : IDataStoreMonitor, IDisposable
     {
-
-
-
         private readonly IMXDataHolderService _dataHolderService;
 
         private bool isActive = false;
 
-
-        public AlarmDataMonitor(IMXDataHolderService dataHolderService) { 
+        public AlarmDataMonitor(IMXDataHolderService dataHolderService)
+        {
 
             _dataHolderService = dataHolderService;
             StartMonitoring();
@@ -55,17 +52,63 @@ namespace MXAccesRestAPI.Monitoring
             switch (changeType)
             {
                 case DataStoreChangeType.ADDED:
-                    Console.WriteLine($"NEW      [ {data.TagName} ]");
+                    // Console.WriteLine($"NEW      [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.REMOVED:
-                    Console.WriteLine($"REMOVED  [ {data.TagName} ]");
+                    // Console.WriteLine($"REMOVED  [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.MODIFIED:
-                    Console.WriteLine($"MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
+                    // Console.WriteLine($"MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
+                    if (data.TagName.EndsWith(".Alarm1") || data.TagName.EndsWith(".Alarm2"))
+                    {
+                        Console.WriteLine($"MODIFIED Alarm [ {data.TagName} ] VAL -> {data.Value}");
+                        // PMCS & TUG
+                        RaiseAlarm(data);
+                    }
                     break;
             }
         }
 
+
+        // PMCS TUG
+        private void RaiseAlarm(MXAttribute attribute)
+        {
+            List<(int, string)> tmpAlarmList = [];
+
+            for (var i = 1; i < 16; i++)
+            {
+                string inAlarmRef = $"{attribute.TagName}.InAlarm";
+                string descriptionRef = $"{attribute.TagName}.Description";
+                string priorityRef = $"{attribute.TagName}.Priority";
+                MXAttribute? inAlarm = _dataHolderService.GetData(inAlarmRef);
+                MXAttribute? description = _dataHolderService.GetData(descriptionRef);
+                MXAttribute? priority = _dataHolderService.GetData(priorityRef);
+
+                if (inAlarm?.Value == null || description?.Value == null || priority?.Value == null)
+                {
+                    Console.WriteLine($"ERROR: inAlarm, description or priority is empty");
+                    continue;
+                }
+
+                int priorityVal = int.Parse(priority.Value.ToString());
+                string descriptionVal = priority.Value.ToString() ?? "";
+                bool inAlarmVal = bool.Parse(inAlarm.Value.ToString());
+
+                // collect active alarms
+                if (inAlarmVal)
+                {
+                    tmpAlarmList.Add((priorityVal, descriptionVal));
+                }
+            }
+
+            // Lower number indicates higher priority
+            tmpAlarmList.Sort((a, b) => b.Item1.CompareTo(a.Item1));
+
+            string tagInstance = attribute.TagName.Split('.')[0];
+            string alarmListArrRef = $"{tagInstance}.AlarmList";
+            _dataHolderService.WriteData(alarmListArrRef, tmpAlarmList, DateTime.Now);
+
+        }
 
     }
 }
