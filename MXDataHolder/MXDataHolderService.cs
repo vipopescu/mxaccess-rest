@@ -296,13 +296,12 @@ namespace MXAccesRestAPI.MXDataHolder
             string full_tag_name;
 
             var attributes = all_attributes
-              .Where(attribute => !attribute.Contains('.') || _allowedAttributes.Where(allowedAttr => attribute.Contains(allowedAttr)).ToArray().Length > 0 )
-              .ToArray() ?? [];
+              .Where(attribute => (!attribute.Contains('.') || _allowedAttributes.Where(allowedAttr => attribute.Contains(allowedAttr)).ToArray().Length > 0) && !attribute.StartsWith('_'))
+              .ToArray();
                
 
             foreach (string attribute in attributes)
             {
-                if (attribute.StartsWith('_')) continue;
 
                 full_tag_name = tag_name + "." + attribute;
                 AddItem(new MXAttribute { TagName = full_tag_name });
