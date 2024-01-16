@@ -59,11 +59,17 @@ namespace MXAccesRestAPI.Monitoring
                     break;
                 case DataStoreChangeType.MODIFIED:
                     // Console.WriteLine($"MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
+
+
                     if (data.TagName.EndsWith(".Alarm1") || data.TagName.EndsWith(".Alarm2"))
                     {
+
+                        // TODO:
+                        // Asset.Alarm1 = true
+                        // Asset.Alarm1.InAlarm = true
                         Console.WriteLine($"MODIFIED Alarm [ {data.TagName} ] VAL -> {data.Value}");
                         // PMCS & TUG
-                        RaiseAlarm(data);
+                        RaiseAlarm(data.TagName.Split('.')[0]);
                     }
                     break;
             }
@@ -71,15 +77,19 @@ namespace MXAccesRestAPI.Monitoring
 
 
         // PMCS TUG
-        private void RaiseAlarm(MXAttribute attribute)
+        private void RaiseAlarm(string instanceTag)
         {
             List<(int, string)> tmpAlarmList = [];
 
+            // TODO:
+            // get instance (Asset)
+            // for each instance, go through Asset.AlarmX (x -> 1 - 16)
+            // get attributes InAlarm
             for (var i = 1; i < 16; i++)
             {
-                string inAlarmRef = $"{attribute.TagName}.InAlarm";
-                string descriptionRef = $"{attribute.TagName}.Description";
-                string priorityRef = $"{attribute.TagName}.Priority";
+                string inAlarmRef = $"{instanceTag}.Alarm{i}.InAlarm";
+                string descriptionRef = $"{instanceTag}.Alarm{i}.Description";
+                string priorityRef = $"{instanceTag}.Alarm{i}.Priority";
                 MXAttribute? inAlarm = _dataHolderService.GetData(inAlarmRef);
                 MXAttribute? description = _dataHolderService.GetData(descriptionRef);
                 MXAttribute? priority = _dataHolderService.GetData(priorityRef);
@@ -104,8 +114,7 @@ namespace MXAccesRestAPI.Monitoring
             // Lower number indicates higher priority
             tmpAlarmList.Sort((a, b) => b.Item1.CompareTo(a.Item1));
 
-            string tagInstance = attribute.TagName.Split('.')[0];
-            string alarmListArrRef = $"{tagInstance}.AlarmList";
+            string alarmListArrRef = $"{instanceTag}.AlarmList";
             _dataHolderService.WriteData(alarmListArrRef, tmpAlarmList, DateTime.Now);
 
         }
