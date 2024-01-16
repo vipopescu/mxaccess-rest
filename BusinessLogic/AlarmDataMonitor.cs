@@ -1,5 +1,6 @@
 using MXAccesRestAPI.Classes;
 using MXAccesRestAPI.MXDataHolder;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MXAccesRestAPI.Monitoring
 {
@@ -67,7 +68,7 @@ namespace MXAccesRestAPI.Monitoring
                         // TODO:
                         // Asset.Alarm1 = true
                         // Asset.Alarm1.InAlarm = true
-                        Console.WriteLine($"MODIFIED Alarm [ {data.TagName} ] VAL -> {data.Value}");
+                        //Console.WriteLine($"MODIFIED Alarm [ {data.TagName} ] VAL -> {data.Value}");
                         // PMCS & TUG
                         RaiseAlarm(data.TagName.Split('.')[0]);
                     }
@@ -96,13 +97,13 @@ namespace MXAccesRestAPI.Monitoring
 
                 if (inAlarm?.Value == null || description?.Value == null || priority?.Value == null)
                 {
-                    Console.WriteLine($"ERROR: inAlarm, description or priority is empty");
+                    // Console.WriteLine($"ERROR: inAlarm, description or priority is empty");
                     continue;
                 }
 
                 int priorityVal = int.Parse(priority.Value.ToString());
-                string descriptionVal = priority.Value.ToString() ?? "";
-                bool inAlarmVal = bool.Parse(inAlarm.Value.ToString());
+                string descriptionVal = description.Value.ToString() ?? "";
+                bool inAlarmVal = bool.Parse(inAlarm.Value.ToString() ?? "False");
 
                 // collect active alarms
                 if (inAlarmVal)
@@ -111,11 +112,19 @@ namespace MXAccesRestAPI.Monitoring
                 }
             }
 
+
+
+
             // Lower number indicates higher priority
             tmpAlarmList.Sort((a, b) => b.Item1.CompareTo(a.Item1));
 
+            // Extract only the descriptions (second part of the tuple) from tmpAlarmList
+            List<string> descriptions = tmpAlarmList.Select(alarm => alarm.Item2).ToList();
+
+
             string alarmListArrRef = $"{instanceTag}.AlarmList";
-            _dataHolderService.WriteData(alarmListArrRef, tmpAlarmList, DateTime.Now);
+            _dataHolderService.WriteData(alarmListArrRef, descriptions, DateTime.Now);
+            Console.WriteLine($"AlarmList [ {alarmListArrRef} ] VAL -> {string.Join(',', descriptions)}");
 
         }
 
