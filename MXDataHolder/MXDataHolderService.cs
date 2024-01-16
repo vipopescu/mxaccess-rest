@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using ArchestrA.GRAccess;
 using ArchestrA.MxAccess;
+using Microsoft.AspNetCore.Components.Web;
 using MXAccesRestAPI.Classes;
 using MXAccesRestAPI.Global;
 using static MXAccesRestAPI.MXDataHolder.IMXDataHolderService;
@@ -50,7 +51,6 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <param name="tagName"></param>
         public void Advise(string tagName)
         {
-
             var item = _dataStore.FirstOrDefault(a => a.Value.TagName == tagName);
             if (!item.Value.OnAdvise)
             {
@@ -298,7 +298,7 @@ namespace MXAccesRestAPI.MXDataHolder
             var attributes = all_attributes
               .Where(attribute => (!attribute.Contains('.') || _allowedAttributes.Where(allowedAttr => attribute.Contains(allowedAttr)).ToArray().Length > 0) && !attribute.StartsWith('_'))
               .ToArray();
-               
+
 
             foreach (string attribute in attributes)
             {
@@ -348,6 +348,7 @@ namespace MXAccesRestAPI.MXDataHolder
                             _dataStore[phItemHandle].Value = pvItemValue;
 
                             NotifyDataStoreChange(phItemHandle, _dataStore[phItemHandle], DataStoreChangeType.MODIFIED);
+
                         }
                     }
                     catch (System.Exception ex)
@@ -357,6 +358,7 @@ namespace MXAccesRestAPI.MXDataHolder
                 }
             }
         }
+
 
         /// <summary>
         /// Writes data to a tag

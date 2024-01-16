@@ -1,14 +1,22 @@
 using MXAccesRestAPI.Classes;
 using MXAccesRestAPI.MXDataHolder;
+using System.Collections;
+using System.Text;
+using System.Text.RegularExpressions;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MXAccesRestAPI.Monitoring
 {
-    public class AlarmDataMonitor : IDataStoreMonitor, IDisposable
+    public partial class AlarmDataMonitor : IDataStoreMonitor, IDisposable
+
     {
+        [GeneratedRegex(@"\.Alarm\d*$")]
+        private static partial Regex AlarmRegex();
+
         private readonly IMXDataHolderService _dataHolderService;
 
         private bool isActive = false;
+
 
         public AlarmDataMonitor(IMXDataHolderService dataHolderService)
         {
@@ -53,29 +61,28 @@ namespace MXAccesRestAPI.Monitoring
             switch (changeType)
             {
                 case DataStoreChangeType.ADDED:
-                    // Console.WriteLine($"NEW      [ {data.TagName} ]");
+                    Console.WriteLine($"NEW      [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.REMOVED:
                     // Console.WriteLine($"REMOVED  [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.MODIFIED:
-                    // Console.WriteLine($"MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
-
-
-                    if (data.TagName.EndsWith(".Alarm1") || data.TagName.EndsWith(".Alarm2"))
+                    if (data.TagName.EndsWith("_FP"))
                     {
-
-                        // TODO:
-                        // Asset.Alarm1 = true
-                        // Asset.Alarm1.InAlarm = true
-                        //Console.WriteLine($"MODIFIED Alarm [ {data.TagName} ] VAL -> {data.Value}");
-                        // PMCS & TUG
-                        RaiseAlarm(data.TagName.Split('.')[0]);
+                        Console.WriteLine($"MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
                     }
+
+
+
+                    if (AlarmRegex().IsMatch(data.TagName))
+                    {
+                        PopulateAlarmList(data.TagName.Split('.')[0]);
+                    }
+
 
                     else if (data.TagName.EndsWith(".ALARM_EVENT_FP") || data.TagName.EndsWith(".FAULT_EVENT_FP"))
                     {
-                        RaiseEvent(data);
+                        PopulateAlarmListFaceplate(data);
 
                     }
                     break;
@@ -83,8 +90,11 @@ namespace MXAccesRestAPI.Monitoring
         }
 
 
-        // PMCS TUG
-        private void RaiseAlarm(string instanceTag)
+        /// <summary>
+        /// Populates AlarmListFaceplate based on from a raised alarm and alarm priority
+        /// </summary>
+        /// <param name="instanceTag"></param>
+        private void PopulateAlarmList(string instanceTag)
         {
             List<(int, string)> tmpAlarmList = [];
 
@@ -99,7 +109,7 @@ namespace MXAccesRestAPI.Monitoring
 
                 if (inAlarm?.Value == null || description?.Value == null || priority?.Value == null)
                 {
-                    // Console.WriteLine($"ERROR: inAlarm, description or priority is empty");
+                    // Values here will be null when initiated but not populated
                     continue;
                 }
 
@@ -122,27 +132,46 @@ namespace MXAccesRestAPI.Monitoring
 
             string alarmListArrRef = $"{instanceTag}.AlarmList";
             _dataHolderService.WriteData(alarmListArrRef, descriptions, DateTime.Now);
-            Console.WriteLine($"AlarmList [ {alarmListArrRef} ] VAL -> {string.Join(',', descriptions)}");
+            if (descriptions.Count > 0)
+            {
+                Console.WriteLine($"AlarmList [ {alarmListArrRef} ] VAL -> {string.Join(',', descriptions)}");
+            }
+
         }
 
 
-        private void RaiseEvent(MXAttribute mxEvent)
+
+        /// <summary>
+        /// Populates AlarmListFaceplate based on from a raised event and alarm priority
+        /// 
+        /// </summary>
+        /// <param name="mxEvent"></param>
+        private void PopulateAlarmListFaceplate(MXAttribute mxEvent)
         {
+            if (mxEvent.Value == null)
+            {
+                // initiated but not populated 
+                return;
+            }
+
 
             string instanceTag = mxEvent.TagName.Split('.')[0];
             string attrTag = mxEvent.TagName.Split('.')[1];
 
             int eventValue = int.Parse(mxEvent.Value.ToString() ?? "0");
 
+
             List<(int, string)> tmpAlarmList = [];
 
             string[] types = ["ALARM_EVENT_EV", "FAULT_EVENT_FP"];
 
-            foreach (string test in types)
+            foreach (string type in types)
             {
                 for (var i = 1; i < 33; i++)
                 {
-                    bool isAlarmSet = (eventValue & 1) != 0;
+                    // get i bit in eventValue
+                    int bit = (eventValue >> i) & 1;
+                    bool isAlarmSet = bit != 0;
                     if (isAlarmSet)
                     {
                         string alarmRef = $"{instanceTag}.FAULT_EVENT_EV{i - 1}";
@@ -153,6 +182,13 @@ namespace MXAccesRestAPI.Monitoring
                         MXAttribute? description = _dataHolderService.GetData(descriptionRef);
                         MXAttribute? priority = _dataHolderService.GetData(priorityRef);
 
+                        if (description?.Value == null || priority?.Value == null)
+                        {
+                            // Values here will be null when initiated but not populated
+                            continue;
+                        }
+
+
                         int priorityVal = int.Parse(priority.Value.ToString());
                         string descriptionVal = description.Value.ToString() ?? "";
 
@@ -162,15 +198,20 @@ namespace MXAccesRestAPI.Monitoring
                 }
             }
 
+
             // Lower number indicates higher priority
             tmpAlarmList.Sort((a, b) => b.Item1.CompareTo(a.Item1));
 
             // Extract only the descriptions (second part of the tuple) from tmpAlarmList
             List<string> descriptions = tmpAlarmList.Select(alarm => alarm.Item2).ToList();
-
-            string alarmListArrRef = $"{instanceTag}.AlarmList";
+            string alarmListArrRef = $"{instanceTag}.AlarmListFaceplate";
             _dataHolderService.WriteData(alarmListArrRef, descriptions, DateTime.Now);
-            Console.WriteLine($"AlarmList [ {alarmListArrRef} ] VAL -> {string.Join(',', descriptions)}");
+            if (descriptions.Count > 0)
+            {
+                Console.WriteLine($"EventsFaultAlarm [ {alarmListArrRef} ] VAL -> {string.Join(',', descriptions)}");
+            }
+
+
         }
 
     }
