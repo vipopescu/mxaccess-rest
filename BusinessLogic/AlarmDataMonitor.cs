@@ -72,6 +72,12 @@ namespace MXAccesRestAPI.Monitoring
                         // PMCS & TUG
                         RaiseAlarm(data.TagName.Split('.')[0]);
                     }
+
+                    else if (data.TagName.EndsWith(".ALARM_EVENT_FP") || data.TagName.EndsWith(".FAULT_EVENT_FP"))
+                    {
+                        RaiseEvent(data);
+
+                    }
                     break;
             }
         }
@@ -82,10 +88,6 @@ namespace MXAccesRestAPI.Monitoring
         {
             List<(int, string)> tmpAlarmList = [];
 
-            // TODO:
-            // get instance (Asset)
-            // for each instance, go through Asset.AlarmX (x -> 1 - 16)
-            // get attributes InAlarm
             for (var i = 1; i < 16; i++)
             {
                 string inAlarmRef = $"{instanceTag}.Alarm{i}.InAlarm";
@@ -112,8 +114,53 @@ namespace MXAccesRestAPI.Monitoring
                 }
             }
 
+            // Lower number indicates higher priority
+            tmpAlarmList.Sort((a, b) => b.Item1.CompareTo(a.Item1));
+
+            // Extract only the descriptions (second part of the tuple) from tmpAlarmList
+            List<string> descriptions = tmpAlarmList.Select(alarm => alarm.Item2).ToList();
+
+            string alarmListArrRef = $"{instanceTag}.AlarmList";
+            _dataHolderService.WriteData(alarmListArrRef, descriptions, DateTime.Now);
+            Console.WriteLine($"AlarmList [ {alarmListArrRef} ] VAL -> {string.Join(',', descriptions)}");
+        }
 
 
+        private void RaiseEvent(MXAttribute mxEvent)
+        {
+
+            string instanceTag = mxEvent.TagName.Split('.')[0];
+            string attrTag = mxEvent.TagName.Split('.')[1];
+
+            int eventValue = int.Parse(mxEvent.Value.ToString() ?? "0");
+
+            List<(int, string)> tmpAlarmList = [];
+
+            string[] types = ["ALARM_EVENT_EV", "FAULT_EVENT_FP"];
+
+            foreach (string test in types)
+            {
+                for (var i = 1; i < 33; i++)
+                {
+                    bool isAlarmSet = (eventValue & 1) != 0;
+                    if (isAlarmSet)
+                    {
+                        string alarmRef = $"{instanceTag}.FAULT_EVENT_EV{i - 1}";
+
+                        string descriptionRef = $"{alarmRef}.Description";
+                        string priorityRef = $"{alarmRef}.Priority";
+
+                        MXAttribute? description = _dataHolderService.GetData(descriptionRef);
+                        MXAttribute? priority = _dataHolderService.GetData(priorityRef);
+
+                        int priorityVal = int.Parse(priority.Value.ToString());
+                        string descriptionVal = description.Value.ToString() ?? "";
+
+                        tmpAlarmList.Add((priorityVal, descriptionVal));
+                    }
+
+                }
+            }
 
             // Lower number indicates higher priority
             tmpAlarmList.Sort((a, b) => b.Item1.CompareTo(a.Item1));
@@ -121,11 +168,9 @@ namespace MXAccesRestAPI.Monitoring
             // Extract only the descriptions (second part of the tuple) from tmpAlarmList
             List<string> descriptions = tmpAlarmList.Select(alarm => alarm.Item2).ToList();
 
-
             string alarmListArrRef = $"{instanceTag}.AlarmList";
             _dataHolderService.WriteData(alarmListArrRef, descriptions, DateTime.Now);
             Console.WriteLine($"AlarmList [ {alarmListArrRef} ] VAL -> {string.Join(',', descriptions)}");
-
         }
 
     }
