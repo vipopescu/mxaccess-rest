@@ -17,7 +17,7 @@ Tag attribute names are configured in *BusinessLogic/AlarmMonitorConfig.cs*
 - Find alarms AssetInstance1.Alarm1 -> AssetInstance1.Alarm16
     - True/False (set / not set)
 - For set alarms (TRUE), get "description" & "priority" from static extended attributes
-    - Me.Alarm16.Description & Me.Alarm16.Priority
+    - AssetInstance1.Alarm1.Description & AssetInstance1.Alarm1.Priority
 - Sort all active alarms that were collected by priority
 - populate array **AssetInstance1.ALARMLIST** with "description"
     - ALARMLIST = [[dsaf], [dsaf], [dsaf]]
