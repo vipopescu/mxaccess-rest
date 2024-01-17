@@ -6,8 +6,6 @@ namespace MXAccesRestAPI.Monitoring
 
     {
         // ALARMS
-        
-
         public const string PLC_IO_ALARM_EVENT = "ALARM_EVENT_EV";
         public const string PLC_IO_FAULT_EVENT = "FAULT_EVENT_EV";
 
@@ -15,11 +13,10 @@ namespace MXAccesRestAPI.Monitoring
         public const string ALARM_PRIORITY_ATTR = "Priority";
 
 
-// Alarms
+        // Alarms
         public const string ALARM_EVENT = "Alarm";
         public const string ALARM_IN_ALARM_ATTR = "InAlarm";
 
-        
         
 
         // FAUL/EVENT Alarms
