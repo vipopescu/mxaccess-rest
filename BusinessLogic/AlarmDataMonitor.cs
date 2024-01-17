@@ -10,7 +10,7 @@ namespace MXAccesRestAPI.Monitoring
     public partial class AlarmDataMonitor : IDataStoreMonitor, IDisposable
 
     {
-        [GeneratedRegex(@"\.Alarm\d*$")]
+        [GeneratedRegex("." + AlarmMonitorConfig.ALARM_EVENT + @"\d*$")]
         private static partial Regex AlarmRegex();
 
         private readonly IMXDataHolderService _dataHolderService;
@@ -80,10 +80,10 @@ namespace MXAccesRestAPI.Monitoring
                     }
 
 
-                    else if (data.TagName.EndsWith(".ALARM_EVENT_FP") || data.TagName.EndsWith(".FAULT_EVENT_FP"))
+                    else if (data.TagName.EndsWith($".{AlarmMonitorConfig.FP_ALARM_EVENT}") ||
+                    data.TagName.EndsWith($".{AlarmMonitorConfig.FP_FAULT_EVENT}"))
                     {
                         PopulateAlarmListFaceplate(data);
-
                     }
                     break;
             }
@@ -100,9 +100,9 @@ namespace MXAccesRestAPI.Monitoring
 
             for (var i = 1; i < 16; i++)
             {
-                string inAlarmRef = $"{instanceTag}.Alarm{i}.InAlarm";
-                string descriptionRef = $"{instanceTag}.Alarm{i}.Description";
-                string priorityRef = $"{instanceTag}.Alarm{i}.Priority";
+                string inAlarmRef = $"{instanceTag}.{AlarmMonitorConfig.ALARM_EVENT}{i}.{AlarmMonitorConfig.ALARM_IN_ALARM_ATTR}";
+                string descriptionRef = $"{instanceTag}.{AlarmMonitorConfig.ALARM_EVENT}{i}.{AlarmMonitorConfig.ALARM_DESCRIPTION_ATTR}";
+                string priorityRef = $"{instanceTag}.{AlarmMonitorConfig.ALARM_EVENT}{i}.{AlarmMonitorConfig.ALARM_PRIORITY_ATTR}";
                 MXAttribute? inAlarm = _dataHolderService.GetData(inAlarmRef);
                 MXAttribute? description = _dataHolderService.GetData(descriptionRef);
                 MXAttribute? priority = _dataHolderService.GetData(priorityRef);
@@ -130,7 +130,7 @@ namespace MXAccesRestAPI.Monitoring
             // Extract only the descriptions (second part of the tuple) from tmpAlarmList
             List<string> descriptions = tmpAlarmList.Select(alarm => alarm.Item2).ToList();
 
-            string alarmListArrRef = $"{instanceTag}.AlarmList";
+            string alarmListArrRef = $"{instanceTag}.{AlarmMonitorConfig.FACEPLATE_ALARM_LIST_ARRAY}";
             _dataHolderService.WriteData(alarmListArrRef, descriptions, DateTime.Now);
             if (descriptions.Count > 0)
             {
@@ -163,7 +163,8 @@ namespace MXAccesRestAPI.Monitoring
 
             List<(int, string)> tmpAlarmList = [];
 
-            string[] types = ["ALARM_EVENT_EV", "FAULT_EVENT_FP"];
+            string[] types = [AlarmMonitorConfig.PLC_IO_ALARM_EVENT, AlarmMonitorConfig.PLC_IO_FAULT_EVENT];
+
 
             foreach (string type in types)
             {
@@ -174,10 +175,10 @@ namespace MXAccesRestAPI.Monitoring
                     bool isAlarmSet = bit != 0;
                     if (isAlarmSet)
                     {
-                        string alarmRef = $"{instanceTag}.FAULT_EVENT_EV{i - 1}";
+                        string alarmRef = $"{instanceTag}.{type}{i - 1}";
 
-                        string descriptionRef = $"{alarmRef}.Description";
-                        string priorityRef = $"{alarmRef}.Priority";
+                        string descriptionRef = $"{alarmRef}.{AlarmMonitorConfig.ALARM_DESCRIPTION_ATTR}";
+                        string priorityRef = $"{alarmRef}.{AlarmMonitorConfig.ALARM_PRIORITY_ATTR}";
 
                         MXAttribute? description = _dataHolderService.GetData(descriptionRef);
                         MXAttribute? priority = _dataHolderService.GetData(priorityRef);
@@ -204,7 +205,7 @@ namespace MXAccesRestAPI.Monitoring
 
             // Extract only the descriptions (second part of the tuple) from tmpAlarmList
             List<string> descriptions = tmpAlarmList.Select(alarm => alarm.Item2).ToList();
-            string alarmListArrRef = $"{instanceTag}.AlarmListFaceplate";
+            string alarmListArrRef = $"{instanceTag}.{AlarmMonitorConfig.FACEPLATE_ALARM_LIST_ARRAY}";
             _dataHolderService.WriteData(alarmListArrRef, descriptions, DateTime.Now);
             if (descriptions.Count > 0)
             {
