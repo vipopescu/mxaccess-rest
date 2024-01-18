@@ -1,19 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
 using MXAccesRestAPI.Classes;
+using MXAccesRestAPI.Monitoring;
 using MXAccesRestAPI.MXDataHolder;
 
 namespace MXAccesRestAPI.Controllers
 {
     [ApiController]
     [Route("mxdata")]
-    public class MXDataController : ControllerBase
+    public class MXDataController(IMXDataHolderService dataHolderService) : ControllerBase
     {
-        private IMXDataHolderService _dataHolderService;
+        private readonly IMXDataHolderService _dataHolderService = dataHolderService;
 
-        public MXDataController(IMXDataHolderService dataHolderService)
-        {
-            _dataHolderService = dataHolderService;
-        }
 
         [HttpGet("instances/{instanceName}/tags")]
         public IActionResult GetInstanceData(string instanceName)
@@ -30,7 +27,7 @@ namespace MXAccesRestAPI.Controllers
         public IActionResult GetTagData(string instanceName, string tagId)
         {
             string fullAttrName = instanceName + "." + tagId;
-            MXAttribute mxattr = _dataHolderService.GetData(fullAttrName);
+            MXAttribute? mxattr = _dataHolderService.GetData(fullAttrName);
             if (mxattr == null)
                 return NotFound("Data not found.");
             return Ok(mxattr.AsDto());
@@ -40,7 +37,7 @@ namespace MXAccesRestAPI.Controllers
         public IActionResult UpdateData(string instanceName, string tagId, [FromBody] UpdadeAttributeDto updatedValue)
         {
             string fullAttrName = instanceName + "." + tagId;
-            MXAttribute mxattr = _dataHolderService.GetData(fullAttrName);
+            MXAttribute? mxattr = _dataHolderService.GetData(fullAttrName);
             if (mxattr == null)
                 return NotFound("Data not found.");
 

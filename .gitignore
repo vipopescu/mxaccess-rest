@@ -396,3 +396,12 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Debugging & Config
+launchSettings.json
+appsettings.*.json
+!appsettings.example.json
+
+
+attributeConfig.*.json
+!attributeConfig.example.json
