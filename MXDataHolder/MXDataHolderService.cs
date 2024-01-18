@@ -24,7 +24,6 @@ namespace MXAccesRestAPI.MXDataHolder
 
 
 
-
         public int hLMX;
         public int userLMX;
         public string ServerName;
@@ -249,6 +248,7 @@ namespace MXAccesRestAPI.MXDataHolder
                     hLMX = _LMX_Server.Register(ServerName);
                     _LMX_Server.OnDataChange += new _ILMXProxyServerEvents_OnDataChangeEventHandler(LMX_OnDataChange);
                     _dataStore = new ConcurrentDictionary<int, MXAttribute>();
+
                 }
             }
             catch (System.Exception ex)
@@ -327,29 +327,39 @@ namespace MXAccesRestAPI.MXDataHolder
                 {
                     try
                     {
-                        // Tag's available attributes
-                        if (_dataStore[phItemHandle].TagName.EndsWith("._Attributes"))
+
+
+
+                        // UDAs
+                        if (_dataStore[phItemHandle].TagName.EndsWith("._InheritedUDAs"))
                         {
-
-                            string[] tag_name = _dataStore[phItemHandle].TagName.Split('.');
-                            string[] attr_list = (string[])pvItemValue;
-                            RegisterAttributes(tag_name[0], attr_list);
-                            RemoveData(_dataStore[phItemHandle].TagName);
-                        }
-                        else
-                        {
-                            _dataStore[phItemHandle].Quality = pwItemQuality;
-
-                            DateTime dateValue;
-                            if (DateTime.TryParse(pftItemTimeStamp.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out dateValue))
-                            {
-                                _dataStore[phItemHandle].TimeStamp = dateValue;
-                            }
-                            _dataStore[phItemHandle].Value = pvItemValue;
-
                             NotifyDataStoreChange(phItemHandle, _dataStore[phItemHandle], DataStoreChangeType.MODIFIED);
-
                         }
+
+
+                        // Tag's available attributes
+                        // if (_dataStore[phItemHandle].TagName.EndsWith("._Attributes"))
+                        // {
+
+                        //     string[] tag_name = _dataStore[phItemHandle].TagName.Split('.');
+                        //     string[] attr_list = (string[])pvItemValue;
+                        //     RegisterAttributes(tag_name[0], attr_list);
+                        //     RemoveData(_dataStore[phItemHandle].TagName);
+                        // }
+                        // else
+                        // {
+                        //     _dataStore[phItemHandle].Quality = pwItemQuality;
+
+                        //     DateTime dateValue;
+                        //     if (DateTime.TryParse(pftItemTimeStamp.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out dateValue))
+                        //     {
+                        //         _dataStore[phItemHandle].TimeStamp = dateValue;
+                        //     }
+                        //     _dataStore[phItemHandle].Value = pvItemValue;
+
+                        //     NotifyDataStoreChange(phItemHandle, _dataStore[phItemHandle], DataStoreChangeType.MODIFIED);
+
+                        // }
                     }
                     catch (System.Exception ex)
                     {

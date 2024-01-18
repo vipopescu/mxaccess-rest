@@ -64,14 +64,10 @@ namespace MXAccesRestAPI.Monitoring
                     Console.WriteLine($"NEW      [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.REMOVED:
-                    // Console.WriteLine($"REMOVED  [ {data.TagName} ]");
+                    Console.WriteLine($"REMOVED  [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.MODIFIED:
-                    if (data.TagName.EndsWith("_FP"))
-                    {
-                        Console.WriteLine($"MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
-                    }
-
+                    Console.WriteLine($"MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
 
 
                     if (AlarmRegex().IsMatch(data.TagName))
