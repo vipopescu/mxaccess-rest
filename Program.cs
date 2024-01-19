@@ -35,7 +35,7 @@ namespace MXAccesRestAPI
 
 
             // Adding services
-            var mxDataHolderService = new MXDataHolderService(serverName, attributeConfig.AllowedTagAttributes);
+            var mxDataHolderService = new MXDataHolderService(1, serverName, attributeConfig.AllowedTagAttributes);
             builder.Services.AddSingleton<IMXDataHolderService>(mxDataHolderService);
             builder.Services.AddHostedService<GRAccessReadingService>();
             builder.Services.AddDbContext<GRDBContext>(options =>

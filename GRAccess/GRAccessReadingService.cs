@@ -96,6 +96,40 @@ namespace MXAccesRestAPI.GRAccess
         public void GetUDAInfo(string[] tag_names)
         {
 
+            int numberOfThreads = 10;
+            if (numberOfThreads < tag_names.Length) numberOfThreads = 1;
+            int segmentSize = tag_names.Length / numberOfThreads;
+
+            for (int i = 0; i < numberOfThreads; i++)
+            {
+
+                // TPL (Task Parallel Library)
+                Task.Factory.StartNew(() =>
+                {
+                    // init MxDataHolderService per thread
+                    var mxDataHolderService = new MXDataHolderService(1, "RESTAPI-AVEVA", []);
+
+                    int segmentStart = i * segmentSize;
+                    int segmentEnd = (i == numberOfThreads - 1) ? tag_names.Length : segmentStart + segmentSize;
+                    ArraySegment<string> segment = new(tag_names, segmentStart, segmentEnd - segmentStart);
+                    // add to thread safe list in GrAccessService?
+                    // add segment of tags to mxdataholder (AddItem)
+
+                    foreach (string tag_name in tag_names)
+                    {
+                        string fullRefName = tag_name + "._Attributes";
+                        mxDataHolderService.AddItem(new MXAttribute { TagName = fullRefName });
+                        attrCount++;
+                    }
+
+                }, TaskCreationOptions.LongRunning);
+
+
+            }
+
+
+
+            return;
             foreach (string tag_name in tag_names)
             {
                 string fullRefName = tag_name + "._Attributes";

@@ -17,9 +17,12 @@ namespace MXAccesRestAPI.MXDataHolder
 
         // Event for data store changes
         public event DataStoreChangeEventHandler? OnDataStoreChanged;
+        private readonly int _threadNumber;
 
         private static readonly List<string> _allowedAttributes = [];
         private ConcurrentDictionary<int, MXAttribute> _dataStore;
+        
+        
         private static LMXProxyServerClass _LMX_Server = new();
 
 
@@ -28,8 +31,9 @@ namespace MXAccesRestAPI.MXDataHolder
         public int userLMX;
         public string ServerName;
 
-        public MXDataHolderService(string serverName, List<string> allowedAttributes)
+        public MXDataHolderService(int threadNumber,string serverName, List<string> allowedAttributes)
         {
+            _threadNumber = threadNumber;
             _dataStore = new ConcurrentDictionary<int, MXAttribute>();
             _allowedAttributes.AddRange(allowedAttributes);
             hLMX = 0;
@@ -40,7 +44,7 @@ namespace MXAccesRestAPI.MXDataHolder
         }
         ~MXDataHolderService()
         {
-            Console.WriteLine("Destroying...");
+            Console.WriteLine($"Destroying [thread {_threadNumber}]...");
             Unregister();
         }
 
@@ -253,7 +257,7 @@ namespace MXAccesRestAPI.MXDataHolder
             }
             catch (System.Exception ex)
             {
-                Console.WriteLine("Register: Exception occurred.");
+                Console.WriteLine($"Register: Exception occurred. [thread {_threadNumber}]");
                 Console.WriteLine(ex.Message);
                 throw;
             }
@@ -270,7 +274,7 @@ namespace MXAccesRestAPI.MXDataHolder
             }
             catch (System.Exception ex)
             {
-                Console.WriteLine("Register: Exception occurred.");
+                Console.WriteLine($"Register: Exception occurred. [thread {_threadNumber}]");
                 Console.WriteLine(ex.Message);
             }
         }
