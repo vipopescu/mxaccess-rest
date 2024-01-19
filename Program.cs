@@ -35,15 +35,15 @@ namespace MXAccesRestAPI
 
 
             // Adding services
-            var mxDataHolderService = new MXDataHolderService(1, serverName, attributeConfig.AllowedTagAttributes);
-            builder.Services.AddSingleton<IMXDataHolderService>(mxDataHolderService);
+            //var mxDataHolderService = new MXDataHolderService(-69, serverName, attributeConfig.AllowedTagAttributes, []);
+            //builder.Services.AddSingleton<IMXDataHolderService>(mxDataHolderService);
             builder.Services.AddHostedService<GRAccessReadingService>();
             builder.Services.AddDbContext<GRDBContext>(options =>
                            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 
             // Register DataStoreMonitor as a Singleton and use the same instance of MXDataHolderService
-            builder.Services.AddSingleton<AlarmDataMonitor>(new AlarmDataMonitor(mxDataHolderService));
+            //builder.Services.AddSingleton<AlarmDataMonitor>(new AlarmDataMonitor(mxDataHolderService));
 
 
             builder.Services.AddControllers().AddJsonOptions(options =>

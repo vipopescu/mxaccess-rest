@@ -1,5 +1,7 @@
 
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Xml.Serialization;
 using ArchestrA.GRAccess;
 using Microsoft.Extensions.Options;
@@ -8,6 +10,7 @@ using MXAccesRestAPI.MXDataHolder;
 using MXAccesRestAPI.Settings;
 using MXAccesRestAPI.XML;
 using MXAccess_RestAPI.DBContext;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace MXAccesRestAPI.GRAccess
 {
@@ -23,15 +26,18 @@ namespace MXAccesRestAPI.GRAccess
 
         private IMXDataHolderService _mxDataHolder;
 
+        private readonly ConcurrentDictionary<int, MXAttribute> _dataStore;
+
         private int attrCount;
 
-        public GRAccessReadingService(IOptions<GalaxySettings> settings, IServiceScopeFactory scopeFactory, IMXDataHolderService mxDataHolder)
+        public GRAccessReadingService(IOptions<GalaxySettings> settings, IServiceScopeFactory scopeFactory) //  IMXDataHolderService mxDataHolder
         {
             _scopeFactory = scopeFactory;
             _mySettings = settings.Value;
             IsFetchComplete = false;
-            _mxDataHolder = mxDataHolder;
+            //_mxDataHolder = mxDataHolder;
             attrCount = 0;
+            _dataStore = new ConcurrentDictionary<int, MXAttribute>();
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -97,46 +103,54 @@ namespace MXAccesRestAPI.GRAccess
         {
 
             int numberOfThreads = 10;
-            if (numberOfThreads < tag_names.Length) numberOfThreads = 1;
+            if (numberOfThreads > tag_names.Length) numberOfThreads = 1;
             int segmentSize = tag_names.Length / numberOfThreads;
 
             for (int i = 0; i < numberOfThreads; i++)
             {
+                // init MxDataHolderService per thread
+
+
+                int segmentStart = i * segmentSize;
+                int segmentEnd = (i == numberOfThreads - 1) ? tag_names.Length : segmentStart + segmentSize;
+                ArraySegment<string> segment = new(tag_names, segmentStart, segmentEnd - segmentStart);
+
+                Console.WriteLine($"[thread {i}] pre-start");
 
                 // TPL (Task Parallel Library)
-                Task.Factory.StartNew(() =>
+               Task.Factory.StartNew(() =>
                 {
-                    // init MxDataHolderService per thread
-                    var mxDataHolderService = new MXDataHolderService(1, "RESTAPI-AVEVA", []);
 
-                    int segmentStart = i * segmentSize;
-                    int segmentEnd = (i == numberOfThreads - 1) ? tag_names.Length : segmentStart + segmentSize;
-                    ArraySegment<string> segment = new(tag_names, segmentStart, segmentEnd - segmentStart);
+                    int threadIndex = i; // Fix for closure issue
+
+                    Console.WriteLine($"[thread {threadIndex}] ini");
+                    var mxDataHolderService = new MXDataHolderService(threadIndex, "RESTAPI-AVEVA", [], _dataStore);
+                    Console.WriteLine($"[thread {threadIndex}] done");
+
                     // add to thread safe list in GrAccessService?
                     // add segment of tags to mxdataholder (AddItem)
 
-                    foreach (string tag_name in tag_names)
+                    foreach (string tag_name in segment)
                     {
                         string fullRefName = tag_name + "._Attributes";
                         mxDataHolderService.AddItem(new MXAttribute { TagName = fullRefName });
                         attrCount++;
                     }
+                    mxDataHolderService.AdviseAll();
+
 
                 }, TaskCreationOptions.LongRunning);
 
 
+
+                // Wait for 1 second before starting the next task
+                Thread.Sleep(1000);
+
+
+                
+              
+               
             }
-
-
-
-            return;
-            foreach (string tag_name in tag_names)
-            {
-                string fullRefName = tag_name + "._Attributes";
-                _mxDataHolder.AddItem(new MXAttribute { TagName = fullRefName });
-                attrCount++;
-            }
-            _mxDataHolder.AdviseAll();
         }
     }
 }
