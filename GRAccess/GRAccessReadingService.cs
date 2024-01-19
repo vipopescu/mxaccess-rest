@@ -115,13 +115,13 @@ namespace MXAccesRestAPI.GRAccess
                 int segmentEnd = (i == numberOfThreads - 1) ? tag_names.Length : segmentStart + segmentSize;
                 ArraySegment<string> segment = new(tag_names, segmentStart, segmentEnd - segmentStart);
 
-                Console.WriteLine($"[thread {i}] pre-start");
+                Console.WriteLine($"[thread {i+1}] pre-start");
 
                 // TPL (Task Parallel Library)
                Task.Factory.StartNew(() =>
                 {
 
-                    int threadIndex = i; // Fix for closure issue
+                    int threadIndex = i+1; // Fix for closure issue
 
                     Console.WriteLine($"[thread {threadIndex}] ini");
                     var mxDataHolderService = new MXDataHolderService(threadIndex, "RESTAPI-AVEVA", [], _dataStore);
