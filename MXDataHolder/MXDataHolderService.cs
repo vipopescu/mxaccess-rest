@@ -114,13 +114,13 @@ namespace MXAccesRestAPI.MXDataHolder
 
         private int GetLmxTagKey(int threadKey)
         {
-            return threadKey - _threadNumber * 1000;
+            return threadKey - _threadNumber * 100000;
         }
 
 
         private int GetThreadFormattedKey(int lmxKey)
         {
-            return _threadNumber * 1000 + lmxKey;
+            return _threadNumber * 100000 + lmxKey;
         }
 
         /// <summary>
