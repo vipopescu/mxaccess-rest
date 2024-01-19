@@ -57,7 +57,7 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <param name="tagName"></param>
         public void Advise(string tagName)
         {
-            var item = _dataStore.FirstOrDefault(a => a.Value.TagName == tagName);
+            var item = _dataStore.FirstOrDefault(a => a.Value.TagName == tagName && a.Value.CurrentThread == _threadNumber);
             if (!item.Value.OnAdvise)
             {
                 _LMX_Server.Advise(hLMX, GetLmxTagKey(item.Key));
@@ -72,7 +72,7 @@ namespace MXAccesRestAPI.MXDataHolder
         public void AdviseDevice(string device_name)
         {
 
-            var items = _dataStore.Where(a => a.Value.TagName.StartsWith(device_name)).Select(a => a);
+            var items = _dataStore.Where(a => a.Value.TagName.StartsWith(device_name) && a.Value.CurrentThread == _threadNumber).Select(a => a);
             foreach (var item in items)
             {
                 if (!item.Value.OnAdvise)
@@ -96,6 +96,10 @@ namespace MXAccesRestAPI.MXDataHolder
             }
             foreach (var item in _dataStore)
             {
+                if(item.Value.CurrentThread != _threadNumber){
+                    // obj instance of different thread
+                    continue;
+                }
                 if (!item.Value.OnAdvise)
                 {
                     _LMX_Server.Advise(hLMX, GetLmxTagKey(item.Key));
@@ -125,7 +129,7 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <param name="item"></param>
         public void AddItem(MXAttribute item)
         {
-
+            item.CurrentThread ??= _threadNumber;
             if (LXMRegistered())
             {
                 try {
@@ -167,6 +171,7 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 foreach (var item in items)
                 {
+                     item.CurrentThread ??= _threadNumber;
                     if (item.TagName != null)
                     {
                         int key = GetThreadFormattedKey(_LMX_Server.AddItem(hLMX, item.TagName));
@@ -192,7 +197,7 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <param name="value"></param>
         public void Unadvise(string value)
         {
-            var item = _dataStore.FirstOrDefault(a => a.Value.TagName == value);
+            var item = _dataStore.FirstOrDefault(a => a.Value.TagName == value && a.Value.CurrentThread == _threadNumber);
             if (item.Value != null && item.Value.OnAdvise)
             {
                 _LMX_Server.UnAdvise(hLMX, GetLmxTagKey(item.Key));
@@ -206,7 +211,8 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <param name="index">Datastore key</param>
         public void Unadvise(int index)
         {
-            if (_dataStore[index].OnAdvise)
+            
+            if (_dataStore[index].OnAdvise && _dataStore[index].CurrentThread == _threadNumber)
             {
                 _LMX_Server.UnAdvise(hLMX, index);
                 _dataStore[index].OnAdvise = false;
@@ -291,6 +297,7 @@ namespace MXAccesRestAPI.MXDataHolder
                     hLMX = _LMX_Server.Register(ServerName);
                     _LMX_Server.OnDataChange += new _ILMXProxyServerEvents_OnDataChangeEventHandler(LMX_OnDataChange);
                     //_dataStore = new ConcurrentDictionary<int, MXAttribute>();
+                     Console.WriteLine($"[Thr: {_threadNumber}] hLMX [{hLMX}]");
 
                 }
             }
