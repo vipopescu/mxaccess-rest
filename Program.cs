@@ -22,7 +22,7 @@ namespace MXAccesRestAPI
             Console.WriteLine($"{DateTime.Now.ToString()} -> Starting the business...");
 
             // Settings & Config
-            string serverName = builder.Configuration.GetValue<string>("ServerName") ?? "";
+            builder.Services.Configure<MxDataDataServiceSettings>(builder.Configuration.GetSection("MxDataDataServiceSettings"));
             builder.Services.Configure<GalaxySettings>(builder.Configuration.GetSection("GalaxySettings"));
 
             // Attribute Tag configuration
@@ -36,18 +36,20 @@ namespace MXAccesRestAPI
             AttributeConfigSettings attributeConfig =
                 JsonSerializer.Deserialize<AttributeConfigSettings>(File.ReadAllText(Path.Combine(basePath, attributeConfPath))) ?? throw new InvalidOperationException($"Attribute Config error: {attributeConfPath}");
 
+            // MxAttribute store
             builder.Services.AddSingleton<ConcurrentDictionary<int, MXAttribute>>(new ConcurrentDictionary<int, MXAttribute>());
-            builder.Services.AddSingleton<IMXDataHolderServiceFactory, MXDataHolderServiceFactory>();
 
-            // Adding services
-            //var mxDataHolderService = new MXDataHolderService(-69, serverName, attributeConfig.AllowedTagAttributes, []);
-            //builder.Services.AddSingleton<IMXDataHolderService>(mxDataHolderService);
+            // Register MXDataHolderServiceFactory with dependencies
+            builder.Services.AddSingleton<IMXDataHolderServiceFactory, MXDataHolderServiceFactory>();
+        
+
             builder.Services.AddHostedService<GRAccessReadingService>();
             builder.Services.AddDbContext<GRDBContext>(options =>
                            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 
             // Register DataStoreMonitor as a Singleton and use the same instance of MXDataHolderService
+            // TODO
             //builder.Services.AddSingleton<AlarmDataMonitor>(new AlarmDataMonitor(mxDataHolderService));
 
 

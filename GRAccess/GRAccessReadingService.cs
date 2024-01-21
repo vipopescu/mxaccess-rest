@@ -1,16 +1,10 @@
-
-using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Xml.Serialization;
 using ArchestrA.GRAccess;
 using Microsoft.Extensions.Options;
 using MXAccesRestAPI.Classes;
 using MXAccesRestAPI.MXDataHolder;
 using MXAccesRestAPI.Settings;
-using MXAccesRestAPI.XML;
 using MXAccess_RestAPI.DBContext;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace MXAccesRestAPI.GRAccess
 {
@@ -24,32 +18,28 @@ namespace MXAccesRestAPI.GRAccess
 
         private readonly IServiceScopeFactory _scopeFactory;
 
-        private IMXDataHolderServiceFactory _imxDataHolderFactory;
+        private readonly IMXDataHolderServiceFactory _imxDataHolderFactory;
 
-        private readonly ConcurrentDictionary<int, MXAttribute> _dataStore;
+        private readonly int _numberOfThreads;
+    
 
-        private int attrCount;
-
-        public GRAccessReadingService(IOptions<GalaxySettings> settings, IServiceScopeFactory scopeFactory, IMXDataHolderServiceFactory imxDataHolderFactory)
+        public GRAccessReadingService(IOptions<MxDataDataServiceSettings> mxDataServiceSettings,IOptions<GalaxySettings> settings, IServiceScopeFactory scopeFactory, IMXDataHolderServiceFactory imxDataHolderFactory)
         {
             _scopeFactory = scopeFactory;
             _mySettings = settings.Value;
             _imxDataHolderFactory = imxDataHolderFactory;
             IsFetchComplete = false;
-            //_mxDataHolder = mxDataHolder;
-            attrCount = 0;
-            _dataStore = new ConcurrentDictionary<int, MXAttribute>();
+            _numberOfThreads = mxDataServiceSettings.Value.MxDataServiceThreads;
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            Stopwatch stopwatch = new Stopwatch();
+            Stopwatch stopwatch = new();
             stopwatch.Start();
-
 
             Console.WriteLine("Getting runtime objects...");
 
-            List<string> instancesTagNames = new List<string>();
+            List<string> instancesTagNames = [];
             using (var scope = _scopeFactory.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<GRDBContext>();
@@ -59,7 +49,7 @@ namespace MXAccesRestAPI.GRAccess
             // Register to _Attributed
             Console.WriteLine("Found " + instancesTagNames.Count + " variables to register...");
 
-            GetUDAInfo([.. instancesTagNames]);
+            RegisterMxTags([.. instancesTagNames]);
 
             Console.WriteLine("Finished loading data...");
 
@@ -69,6 +59,52 @@ namespace MXAccesRestAPI.GRAccess
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Registers UDAs and other related MX tags
+        /// </summary>
+        /// <param name="galaxy"></param>
+        /// <param name="tag_names"></param>
+        public void RegisterMxTags(string[] tag_names)
+        {
+
+            int numberOfThreads = _numberOfThreads;
+            if (numberOfThreads > tag_names.Length) numberOfThreads = 1;
+            int segmentSize = tag_names.Length / numberOfThreads;
+
+            for (int i = 0; i < numberOfThreads; i++)
+            {
+                // init MxDataHolderService per thread
+                int locali = i;
+
+                // add segment of tags to mxdataholder (AddItem)
+                int segmentStart = i * segmentSize;
+                int segmentEnd = (i == numberOfThreads - 1) ? tag_names.Length : segmentStart + segmentSize;
+                ArraySegment<string> segment = new(tag_names, segmentStart, segmentEnd - segmentStart);
+
+                // TPL (Task Parallel Library)
+                // These longrunning threads will be continously running in background
+                Task.Factory.StartNew(() =>
+                 {
+                     int threadIndex = locali + 1; // Fix for closure issue
+                     var mxDataHolderService = _imxDataHolderFactory.Create(threadIndex);
+
+                     foreach (string tag_name in segment)
+                     {
+                         string fullRefName = tag_name + "._Attributes";
+                         mxDataHolderService.AddItem(new MXAttribute { TagName = fullRefName });
+                     }
+
+                     mxDataHolderService.AdviseAll();
+                 }, TaskCreationOptions.LongRunning);
+            }
+        }
+    
+    
+    
+        /// <summary>
+        /// Retrives GrAccess Galaxy
+        /// </summary>
+        /// <returns></returns>
         IGalaxy? RetrieveGalaxy()
         {
             // Query the Galaxies, check if we can reach the server and if the desired
@@ -94,50 +130,6 @@ namespace MXAccesRestAPI.GRAccess
                 return null;
             }
             return galaxy;
-        }
-
-        /// <summary>
-        /// </summary>
-        /// <param name="galaxy"></param>
-        /// <param name="tag_names"></param>
-        public void GetUDAInfo(string[] tag_names)
-        {
-
-            int numberOfThreads = 10;
-            if (numberOfThreads > tag_names.Length) numberOfThreads = 1;
-            int segmentSize = tag_names.Length / numberOfThreads;
-
-            for (int i = 0; i < numberOfThreads; i++)
-            {
-                // init MxDataHolderService per thread
-
-                int locali = i;
-
-                // add segment of tags to mxdataholder (AddItem)
-                int segmentStart = i * segmentSize;
-                int segmentEnd = (i == numberOfThreads - 1) ? tag_names.Length : segmentStart + segmentSize;
-                ArraySegment<string> segment = new(tag_names, segmentStart, segmentEnd - segmentStart);
-
-                // TPL (Task Parallel Library)
-                Task.Factory.StartNew(() =>
-                 {
-                     int threadIndex = locali + 1; // Fix for closure issue
-                     var mxDataHolderService = _imxDataHolderFactory.Create(threadIndex, "RESTAPI-AVEVA", []);
-
-                     // add to thread safe list in GrAccessService?
-
-
-
-                     foreach (string tag_name in segment)
-                     {
-                         string fullRefName = tag_name + "._Attributes";
-                         mxDataHolderService.AddItem(new MXAttribute { TagName = fullRefName });
-                         attrCount++;
-                     }
-
-                     mxDataHolderService.AdviseAll();
-                 }, TaskCreationOptions.LongRunning);
-            }
         }
     }
 }

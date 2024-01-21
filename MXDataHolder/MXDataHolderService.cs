@@ -15,42 +15,39 @@ namespace MXAccesRestAPI.MXDataHolder
     public class MXDataHolderService : IMXDataHolderService
     {
 
+        private System.Timers.Timer timer;
+
 
         // Event for data store changes
         public event DataStoreChangeEventHandler? OnDataStoreChanged;
         private readonly int _threadNumber;
 
-        private List<string> _allowedAttributes = [];
+        private readonly List<string> _allowedAttributes = [];
         private readonly ConcurrentDictionary<int, MXAttribute> _dataStore;
 
 
-        private LMXProxyServerClass _LMX_Server;
+        // LMX Server Config
+        private LMXProxyServerClass _LmxServer = new();
+
+        private readonly string _serverName;
+        private readonly string _lmxVerifyUser;
+
+        private int _hLmxServerId = 0;
+        private int _userLmxId;
 
 
-
-        public int hLMX;
-        public int userLMX;
-        public string ServerName;
-
-        System.Timers.Timer timer;
-
-        public MXDataHolderService(int threadNumber, string serverName, List<string> allowedAttributes, ConcurrentDictionary<int, MXAttribute> datastore)
+        public MXDataHolderService(int threadNumber, string serverName, string lmxVerifyUser, List<string> allowedAttributes, ConcurrentDictionary<int, MXAttribute> datastore)
         {
 
             _threadNumber = threadNumber;
-            // _dataStore = new ConcurrentDictionary<int, MXAttribute>();
             _dataStore = datastore;
 
             _allowedAttributes = allowedAttributes;
-            hLMX = 0;
-            ServerName = serverName;
-            userLMX = 0;
+            _serverName = serverName;
+            _lmxVerifyUser = lmxVerifyUser;
+            _userLmxId = 0;
             Register();
-            //RegisterUser();
-        
-
-            
-
+            // RegisterUser(); // TODO: disabled for now, but will need when writing values
         }
         ~MXDataHolderService()
         {
@@ -87,7 +84,7 @@ namespace MXAccesRestAPI.MXDataHolder
             var item = _dataStore.FirstOrDefault(a => a.Value.TagName == tagName && a.Value.CurrentThread == _threadNumber);
             if (!item.Value.OnAdvise)
             {
-                _LMX_Server.Advise(hLMX, GetLmxTagKey(item.Key));
+                _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
                 item.Value.OnAdvise = true;
             }
         }
@@ -104,7 +101,7 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 if (!item.Value.OnAdvise)
                 {
-                    _LMX_Server.Advise(hLMX, GetLmxTagKey(item.Key));
+                    _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
                     item.Value.OnAdvise = true;
                 }
             }
@@ -130,12 +127,11 @@ namespace MXAccesRestAPI.MXDataHolder
                 }
                 if (!item.Value.OnAdvise)
                 {
-                    _LMX_Server.Advise(hLMX, GetLmxTagKey(item.Key));
+                    _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
                     item.Value.OnAdvise = true;
                 }
             }
         }
-
 
 
 
@@ -163,7 +159,7 @@ namespace MXAccesRestAPI.MXDataHolder
                 try
                 {
 
-                    int key = GetThreadFormattedKey(_LMX_Server.AddItem(hLMX, item.TagName));
+                    int key = GetThreadFormattedKey(_LmxServer.AddItem(_hLmxServerId, item.TagName));
 
                     bool succcess = _dataStore.TryAdd(key, item);
                     if (!succcess)
@@ -201,7 +197,7 @@ namespace MXAccesRestAPI.MXDataHolder
                     item.CurrentThread ??= _threadNumber;
                     if (item.TagName != null)
                     {
-                        int key = GetThreadFormattedKey(_LMX_Server.AddItem(hLMX, item.TagName));
+                        int key = GetThreadFormattedKey(_LmxServer.AddItem(_hLmxServerId, item.TagName));
                         _dataStore.TryAdd(key, item);
                         NotifyDataStoreChange(key, item, DataStoreChangeType.ADDED);
                     }
@@ -227,7 +223,7 @@ namespace MXAccesRestAPI.MXDataHolder
             var item = _dataStore.FirstOrDefault(a => a.Value.TagName == value && a.Value.CurrentThread == _threadNumber);
             if (item.Value != null && item.Value.OnAdvise)
             {
-                _LMX_Server.UnAdvise(hLMX, GetLmxTagKey(item.Key));
+                _LmxServer.UnAdvise(_hLmxServerId, GetLmxTagKey(item.Key));
                 item.Value.OnAdvise = false;
             }
         }
@@ -241,7 +237,7 @@ namespace MXAccesRestAPI.MXDataHolder
 
             if (_dataStore[index].OnAdvise && _dataStore[index].CurrentThread == _threadNumber)
             {
-                _LMX_Server.UnAdvise(hLMX, index);
+                _LmxServer.UnAdvise(_hLmxServerId, index);
                 _dataStore[index].OnAdvise = false;
             }
         }
@@ -277,7 +273,7 @@ namespace MXAccesRestAPI.MXDataHolder
 
             if (!_dataStore.IsEmpty)
             {
-                _LMX_Server.RemoveItem(hLMX, GetLmxTagKey(item.Key));
+                _LmxServer.RemoveItem(_hLmxServerId, GetLmxTagKey(item.Key));
                 _dataStore.TryRemove(item);
                 NotifyDataStoreChange(item.Key, item.Value, DataStoreChangeType.REMOVED);
 
@@ -300,7 +296,7 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 Unadvise(_dataStore[id].TagName);
             }
-            _LMX_Server.RemoveItem(hLMX, GetLmxTagKey(id));
+            _LmxServer.RemoveItem(_hLmxServerId, GetLmxTagKey(id));
             _dataStore.TryRemove(id, out var valueRemoved);
             if (valueRemoved != null)
             {
@@ -318,15 +314,13 @@ namespace MXAccesRestAPI.MXDataHolder
         {
             try
             {
-                _LMX_Server = new();
-
-                if ((_LMX_Server != null) && (hLMX == 0))
+                if ((_LmxServer != null) && (_hLmxServerId == 0))
                 {
-                    
-                    hLMX = _LMX_Server.Register(ServerName + "_" + _threadNumber);
-                    _LMX_Server.OnDataChange += new _ILMXProxyServerEvents_OnDataChangeEventHandler(LMX_OnDataChange);
+
+                    _hLmxServerId = _LmxServer.Register(_serverName + "_" + _threadNumber);
+                    _LmxServer.OnDataChange += new _ILMXProxyServerEvents_OnDataChangeEventHandler(LMX_OnDataChange);
                     //_dataStore = new ConcurrentDictionary<int, MXAttribute>();
-                    Console.WriteLine($"[Thr: {_threadNumber}] hLMX [{hLMX}] -> Registered");
+                    Console.WriteLine($"[Thr: {_threadNumber}] hLMX [{_hLmxServerId}] -> Registered");
 
                 }
             }
@@ -344,8 +338,8 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 if (LXMRegistered())
                 {
-                    Console.WriteLine($"hLMX [{hLMX}] [thread {_threadNumber}]");
-                    userLMX = _LMX_Server.AuthenticateUser(hLMX, "vipopescu", "");
+                    Console.WriteLine($"hLMX [{_hLmxServerId}] [thread {_threadNumber}] UserAuth [{_lmxVerifyUser}]");
+                    _userLmxId = _LmxServer.AuthenticateUser(_hLmxServerId, _lmxVerifyUser, "");
                 }
             }
             catch (System.Exception ex)
@@ -361,7 +355,7 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <returns></returns>
         public bool LXMRegistered()
         {
-            return (_LMX_Server != null) && (hLMX != 0);
+            return (_LmxServer != null) && (_hLmxServerId != 0);
         }
 
 
@@ -403,7 +397,7 @@ namespace MXAccesRestAPI.MXDataHolder
 
             int threadTagKey = GetThreadFormattedKey(phItemHandle);
             MXAttribute? mxAttr = _dataStore[threadTagKey];
-            
+
 
 
             if (mxAttr != null)
@@ -417,7 +411,7 @@ namespace MXAccesRestAPI.MXDataHolder
                         if (mxAttr.TagName.EndsWith("._Attributes"))
                         {
                             mxAttr.initialized = true;
-                            
+
                             //Console.WriteLine($"LMX_OnDataChange [thread {_threadNumber}] [{threadTagKey}] [{_dataStore[threadTagKey].TagName}]");
 
                             string[] tag_name = mxAttr.TagName.Split('.');
@@ -427,10 +421,7 @@ namespace MXAccesRestAPI.MXDataHolder
                             RemoveData(mxAttr.TagName);
 
 
-                            if (timer == null)
-                            {
-                                timer = new Timer(5000);   
-                            }
+                            timer ??= new Timer(5000);
 
                             if (!timer.Enabled)
                             {
@@ -449,7 +440,7 @@ namespace MXAccesRestAPI.MXDataHolder
                                 mxAttr.TimeStamp = dateValue;
                             }
                             mxAttr.Value = pvItemValue;
-                            
+
                             //Console.WriteLine($"LMX_OnDataChange [thread {_threadNumber}] [{threadTagKey}] [{_dataStore[threadTagKey].TagName}]");
 
                             NotifyDataStoreChange(threadTagKey, mxAttr, DataStoreChangeType.MODIFIED);
@@ -487,11 +478,11 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 if (timeStamp != null)
                 {
-                    _LMX_Server.Write2(hLMX, GetLmxTagKey(item.Key), value.ToString(), timeStamp, userLMX);
+                    _LmxServer.Write2(_hLmxServerId, GetLmxTagKey(item.Key), value.ToString(), timeStamp, _userLmxId);
                 }
                 else
                 {
-                    _LMX_Server.Write(hLMX, GetLmxTagKey(item.Key), value.ToString(), userLMX);
+                    _LmxServer.Write(_hLmxServerId, GetLmxTagKey(item.Key), value.ToString(), _userLmxId);
                 }
             }
         }
@@ -501,14 +492,14 @@ namespace MXAccesRestAPI.MXDataHolder
         /// </summary>
         public void Unregister()
         {
-            if ((_LMX_Server != null) && (hLMX != 0))
+            if ((_LmxServer != null) && (_hLmxServerId != 0))
             {
                 UnAdviseAll();
                 RemoveAll();
 
-                _LMX_Server.Unregister(hLMX);
-                _LMX_Server = new LMXProxyServerClass();
-                hLMX = 0;
+                _LmxServer.Unregister(_hLmxServerId);
+                _LmxServer = new LMXProxyServerClass();
+                _hLmxServerId = 0;
             }
         }
 
