@@ -98,7 +98,7 @@ public partial class GRDBContext : DbContext
     public List<string> GetRuntimeObjectInstances()
     {
         return Gobjects
-                .Where(g => !g.IsTemplate && g.NamespaceId == 1)
+                .Where(g => !g.IsTemplate && g.NamespaceId == 1 && g.DeployedPackageId > 0)
                 .Select(g => g.TagName)
                 .Distinct()
                 .ToList();

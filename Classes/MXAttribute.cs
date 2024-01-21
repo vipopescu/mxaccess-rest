@@ -8,6 +8,7 @@ namespace MXAccesRestAPI.Classes
         public int Quality { get; set; }
         public bool OnAdvise { get; set; }
 
+        public bool initialized = false;
         public int? CurrentThread  { get; set; }
     }
 

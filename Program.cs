@@ -8,6 +8,7 @@ using MXAccess_RestAPI.DBContext;
 using System.Text.Json;
 using MXAccesRestAPI.Classes;
 using MXAccesRestAPI.Monitoring;
+using System.Collections.Concurrent;
 
 namespace MXAccesRestAPI
 {
@@ -17,6 +18,8 @@ namespace MXAccesRestAPI
         {
 
             var builder = WebApplication.CreateBuilder(args);
+
+            Console.WriteLine($"{DateTime.Now.ToString()} -> Starting the business...");
 
             // Settings & Config
             string serverName = builder.Configuration.GetValue<string>("ServerName") ?? "";
@@ -33,6 +36,8 @@ namespace MXAccesRestAPI
             AttributeConfigSettings attributeConfig =
                 JsonSerializer.Deserialize<AttributeConfigSettings>(File.ReadAllText(Path.Combine(basePath, attributeConfPath))) ?? throw new InvalidOperationException($"Attribute Config error: {attributeConfPath}");
 
+            builder.Services.AddSingleton<ConcurrentDictionary<int, MXAttribute>>(new ConcurrentDictionary<int, MXAttribute>());
+            builder.Services.AddSingleton<IMXDataHolderServiceFactory, MXDataHolderServiceFactory>();
 
             // Adding services
             //var mxDataHolderService = new MXDataHolderService(-69, serverName, attributeConfig.AllowedTagAttributes, []);

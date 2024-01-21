@@ -24,16 +24,17 @@ namespace MXAccesRestAPI.GRAccess
 
         private readonly IServiceScopeFactory _scopeFactory;
 
-        private IMXDataHolderService _mxDataHolder;
+        private IMXDataHolderServiceFactory _imxDataHolderFactory;
 
         private readonly ConcurrentDictionary<int, MXAttribute> _dataStore;
 
         private int attrCount;
 
-        public GRAccessReadingService(IOptions<GalaxySettings> settings, IServiceScopeFactory scopeFactory) //  IMXDataHolderService mxDataHolder
+        public GRAccessReadingService(IOptions<GalaxySettings> settings, IServiceScopeFactory scopeFactory, IMXDataHolderServiceFactory imxDataHolderFactory)
         {
             _scopeFactory = scopeFactory;
             _mySettings = settings.Value;
+            _imxDataHolderFactory = imxDataHolderFactory;
             IsFetchComplete = false;
             //_mxDataHolder = mxDataHolder;
             attrCount = 0;
@@ -110,49 +111,33 @@ namespace MXAccesRestAPI.GRAccess
             {
                 // init MxDataHolderService per thread
 
+                int locali = i;
 
+                // add segment of tags to mxdataholder (AddItem)
                 int segmentStart = i * segmentSize;
                 int segmentEnd = (i == numberOfThreads - 1) ? tag_names.Length : segmentStart + segmentSize;
                 ArraySegment<string> segment = new(tag_names, segmentStart, segmentEnd - segmentStart);
 
-                Console.WriteLine($"[thread {i+1}] pre-start");
-
                 // TPL (Task Parallel Library)
-               Task.Factory.StartNew(() =>
-                {
+                Task.Factory.StartNew(() =>
+                 {
+                     int threadIndex = locali + 1; // Fix for closure issue
+                     var mxDataHolderService = _imxDataHolderFactory.Create(threadIndex, "RESTAPI-AVEVA", []);
 
-                    int threadIndex = i+1; // Fix for closure issue
-
-                    Console.WriteLine($"[thread {threadIndex}] ini");
-                    var mxDataHolderService = new MXDataHolderService(threadIndex, "RESTAPI-AVEVA", [], _dataStore);
-                    Console.WriteLine($"[thread {threadIndex}] done");
-
-                    // add to thread safe list in GrAccessService?
-                    // add segment of tags to mxdataholder (AddItem)
-
-                    foreach (string tag_name in segment)
-                    {
-                        string fullRefName = tag_name + "._Attributes";
-                        mxDataHolderService.AddItem(new MXAttribute { TagName = fullRefName });
-                        attrCount++;
-                    }
-                    mxDataHolderService.AdviseAll();
-
-
-                }, TaskCreationOptions.LongRunning);
+                     // add to thread safe list in GrAccessService?
 
 
 
-                // Wait for 1 second before starting the next task
-                Thread.Sleep(1000);
+                     foreach (string tag_name in segment)
+                     {
+                         string fullRefName = tag_name + "._Attributes";
+                         mxDataHolderService.AddItem(new MXAttribute { TagName = fullRefName });
+                         attrCount++;
+                     }
 
-
-                
-              
-               
+                     mxDataHolderService.AdviseAll();
+                 }, TaskCreationOptions.LongRunning);
             }
         }
     }
 }
-
-

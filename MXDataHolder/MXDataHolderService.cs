@@ -1,10 +1,13 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Threading;
+using System.Timers;
 using ArchestrA.GRAccess;
 using ArchestrA.MxAccess;
 using MXAccesRestAPI.Classes;
 using MXAccesRestAPI.Global;
 using static MXAccesRestAPI.MXDataHolder.IMXDataHolderService;
+using Timer = System.Timers.Timer;
 
 namespace MXAccesRestAPI.MXDataHolder
 {
@@ -17,11 +20,11 @@ namespace MXAccesRestAPI.MXDataHolder
         public event DataStoreChangeEventHandler? OnDataStoreChanged;
         private readonly int _threadNumber;
 
-        private static readonly List<string> _allowedAttributes = [];
+        private List<string> _allowedAttributes = [];
         private readonly ConcurrentDictionary<int, MXAttribute> _dataStore;
 
 
-        private static LMXProxyServerClass _LMX_Server = new();
+        private LMXProxyServerClass _LMX_Server;
 
 
 
@@ -29,26 +32,50 @@ namespace MXAccesRestAPI.MXDataHolder
         public int userLMX;
         public string ServerName;
 
+        System.Timers.Timer timer;
+
         public MXDataHolderService(int threadNumber, string serverName, List<string> allowedAttributes, ConcurrentDictionary<int, MXAttribute> datastore)
         {
 
             _threadNumber = threadNumber;
-            Console.WriteLine($"START Registered MXDataHolderService [thread {_threadNumber}]...");
             // _dataStore = new ConcurrentDictionary<int, MXAttribute>();
             _dataStore = datastore;
 
-            _allowedAttributes.AddRange(allowedAttributes);
+            _allowedAttributes = allowedAttributes;
             hLMX = 0;
             ServerName = serverName;
             userLMX = 0;
             Register();
             //RegisterUser();
-            Console.WriteLine($"END Registered MXDataHolderService [thread {threadNumber}]...");
+        
+
+            
+
         }
         ~MXDataHolderService()
         {
             Console.WriteLine($"Destroying [thread {_threadNumber}]...");
             Unregister();
+        }
+
+        private void OnTimedEvent(Object source, ElapsedEventArgs e)
+        {
+            //var itemsNotInitialized = _dataStore.Where(a=> a.Value.CurrentThread == _threadNumber && !a.Value.initialized).Select(a => a);
+            //Console.WriteLine($"{DateTime.Now.ToString()} -> Thread [{_threadNumber}] have {itemsNotInitialized.Count()} items not initalizaed...");
+            //if (itemsNotInitialized.Count() > 0)
+            //{
+            //    foreach (var item in itemsNotInitialized)
+            //    {
+            //        Console.Write(item.Value.TagName + ", ");
+            //    }
+            //}
+
+            var itemsNotInitialized = _dataStore.Where(a => a.Value.CurrentThread == _threadNumber && !a.Value.initialized).Select(a => a).Count();
+            if (itemsNotInitialized == 0)
+            {
+                Console.WriteLine($"{DateTime.Now.ToString()} -> Thread [{_threadNumber}] have {itemsNotInitialized} items not initalizaed...");
+                timer.Enabled = false;
+            }
         }
 
         /// <summary>
@@ -96,7 +123,8 @@ namespace MXAccesRestAPI.MXDataHolder
             }
             foreach (var item in _dataStore)
             {
-                if(item.Value.CurrentThread != _threadNumber){
+                if (item.Value.CurrentThread != _threadNumber)
+                {
                     // obj instance of different thread
                     continue;
                 }
@@ -132,27 +160,26 @@ namespace MXAccesRestAPI.MXDataHolder
             item.CurrentThread ??= _threadNumber;
             if (LXMRegistered())
             {
-                try {
+                try
+                {
 
                     int key = GetThreadFormattedKey(_LMX_Server.AddItem(hLMX, item.TagName));
 
                     bool succcess = _dataStore.TryAdd(key, item);
                     if (!succcess)
                     {
-
                         Console.WriteLine($"[thread {_threadNumber}] > fail to add item [{key}] [{item.TagName}]");
                     }
                     else
                     {
-                        Console.WriteLine($"[Thr: {_threadNumber}] [ADDED] [ {item.TagName} ] KEY -> {key}");
                         NotifyDataStoreChange(key, item, DataStoreChangeType.ADDED);
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     Console.WriteLine($"");
                 }
-                
+
 
 
             }
@@ -171,7 +198,7 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 foreach (var item in items)
                 {
-                     item.CurrentThread ??= _threadNumber;
+                    item.CurrentThread ??= _threadNumber;
                     if (item.TagName != null)
                     {
                         int key = GetThreadFormattedKey(_LMX_Server.AddItem(hLMX, item.TagName));
@@ -211,7 +238,7 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <param name="index">Datastore key</param>
         public void Unadvise(int index)
         {
-            
+
             if (_dataStore[index].OnAdvise && _dataStore[index].CurrentThread == _threadNumber)
             {
                 _LMX_Server.UnAdvise(hLMX, index);
@@ -291,13 +318,15 @@ namespace MXAccesRestAPI.MXDataHolder
         {
             try
             {
+                _LMX_Server = new();
 
                 if ((_LMX_Server != null) && (hLMX == 0))
                 {
-                    hLMX = _LMX_Server.Register(ServerName);
+                    
+                    hLMX = _LMX_Server.Register(ServerName + "_" + _threadNumber);
                     _LMX_Server.OnDataChange += new _ILMXProxyServerEvents_OnDataChangeEventHandler(LMX_OnDataChange);
                     //_dataStore = new ConcurrentDictionary<int, MXAttribute>();
-                     Console.WriteLine($"[Thr: {_threadNumber}] hLMX [{hLMX}]");
+                    Console.WriteLine($"[Thr: {_threadNumber}] hLMX [{hLMX}] -> Registered");
 
                 }
             }
@@ -373,8 +402,8 @@ namespace MXAccesRestAPI.MXDataHolder
         {
 
             int threadTagKey = GetThreadFormattedKey(phItemHandle);
-            MXAttribute? mxAttr = _dataStore[phItemHandle];
-            Console.WriteLine($"LMX_OnDataChange [thread {_threadNumber}] [{threadTagKey}]");
+            MXAttribute? mxAttr = _dataStore[threadTagKey];
+            
 
 
             if (mxAttr != null)
@@ -387,15 +416,32 @@ namespace MXAccesRestAPI.MXDataHolder
                         // Tag's available attributes
                         if (mxAttr.TagName.EndsWith("._Attributes"))
                         {
+                            mxAttr.initialized = true;
+                            
+                            //Console.WriteLine($"LMX_OnDataChange [thread {_threadNumber}] [{threadTagKey}] [{_dataStore[threadTagKey].TagName}]");
 
                             string[] tag_name = mxAttr.TagName.Split('.');
                             string[] attr_list = (string[])pvItemValue;
+
                             RegisterAttributes(tag_name[0], attr_list);
                             RemoveData(mxAttr.TagName);
+
+
+                            if (timer == null)
+                            {
+                                timer = new Timer(5000);   
+                            }
+
+                            if (!timer.Enabled)
+                            {
+                                timer.Elapsed += OnTimedEvent;
+                                timer.Enabled = true;
+                            }
                         }
                         else
                         {
                             mxAttr.Quality = pwItemQuality;
+                            mxAttr.initialized = true;
 
                             DateTime dateValue;
                             if (DateTime.TryParse(pftItemTimeStamp.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out dateValue))
@@ -403,6 +449,8 @@ namespace MXAccesRestAPI.MXDataHolder
                                 mxAttr.TimeStamp = dateValue;
                             }
                             mxAttr.Value = pvItemValue;
+                            
+                            //Console.WriteLine($"LMX_OnDataChange [thread {_threadNumber}] [{threadTagKey}] [{_dataStore[threadTagKey].TagName}]");
 
                             NotifyDataStoreChange(threadTagKey, mxAttr, DataStoreChangeType.MODIFIED);
 
