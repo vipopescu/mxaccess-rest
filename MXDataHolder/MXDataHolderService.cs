@@ -1,11 +1,7 @@
-using System.Collections.Concurrent;
 using System.Globalization;
-using System.Threading;
 using System.Timers;
-using ArchestrA.GRAccess;
 using ArchestrA.MxAccess;
 using MXAccesRestAPI.Classes;
-using MXAccesRestAPI.Global;
 using static MXAccesRestAPI.MXDataHolder.IMXDataHolderService;
 using Timer = System.Timers.Timer;
 
@@ -22,7 +18,7 @@ namespace MXAccesRestAPI.MXDataHolder
         public readonly int threadNumber;
 
         private readonly List<string> _allowedAttributes = [];
-        private readonly ConcurrentDictionary<int, MXAttribute> _dataStore;
+        private readonly IDataProviderService _dataProvider;
 
 
         // LMX Server Config
@@ -35,11 +31,11 @@ namespace MXAccesRestAPI.MXDataHolder
         private int _userLmxId;
 
 
-        public MXDataHolderService(int threadNumber, string serverName, string lmxVerifyUser, List<string> allowedAttributes, ConcurrentDictionary<int, MXAttribute> datastore)
+        public MXDataHolderService(int threadNumber, string serverName, string lmxVerifyUser, List<string> allowedAttributes, IDataProviderService dataProvider)
         {
 
             this.threadNumber = threadNumber;
-            _dataStore = datastore;
+            _dataProvider = dataProvider;
 
             _allowedAttributes = allowedAttributes;
             _serverName = serverName;
@@ -56,7 +52,19 @@ namespace MXAccesRestAPI.MXDataHolder
 
         private void OnTimedEvent(Object source, ElapsedEventArgs e)
         {
-            //var itemsNotInitialized = _dataStore.Where(a=> a.Value.CurrentThread == _threadNumber && !a.Value.initialized).Select(a => a);
+            List<MXAttribute> items = _dataProvider.GetAllData();
+            var itemsNotInitialized = items.Where(a => a.CurrentThread == threadNumber && !a.initialized).Select(a => a).Count();
+            if (itemsNotInitialized != 0)
+            {
+                Console.WriteLine($"{DateTime.Now} -> Thread [{threadNumber}] have {itemsNotInitialized} items not initalizaed...");
+            }
+            else
+            {
+                Console.WriteLine($"{DateTime.Now} -> Thread [{threadNumber}] all initialised");
+                timer.Enabled = false;
+            }
+
+            // DEBUG
             //Console.WriteLine($"{DateTime.Now.ToString()} -> Thread [{_threadNumber}] have {itemsNotInitialized.Count()} items not initalizaed...");
             //if (itemsNotInitialized.Count() > 0)
             //{
@@ -65,17 +73,6 @@ namespace MXAccesRestAPI.MXDataHolder
             //        Console.Write(item.Value.TagName + ", ");
             //    }
             //}
-
-            var itemsNotInitialized = _dataStore.Where(a => a.Value.CurrentThread == threadNumber && !a.Value.initialized).Select(a => a).Count();
-            if (itemsNotInitialized != 0)
-            {
-                Console.WriteLine($"{DateTime.Now.ToString()} -> Thread [{threadNumber}] have {itemsNotInitialized} items not initalizaed...");
-            }
-            else
-            {
-                Console.WriteLine($"{DateTime.Now.ToString()} -> Thread [{threadNumber}] all initialised");
-                timer.Enabled = false;
-            }
         }
 
         /// <summary>
@@ -84,11 +81,19 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <param name="tagName"></param>
         public void Advise(string tagName)
         {
-            var item = _dataStore.FirstOrDefault(a => a.Value.TagName == tagName && a.Value.CurrentThread == threadNumber);
-            if (!item.Value.OnAdvise)
+
+            List<MXAttribute> items = _dataProvider.GetAllData();
+            // exclude other thread objects
+            MXAttribute? item = items.FirstOrDefault(a => a.TagName == tagName && a.CurrentThread == threadNumber);
+            if (item == null)
+            {
+                return;
+            }
+
+            if (!item.OnAdvise)
             {
                 _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
-                item.Value.OnAdvise = true;
+                item.OnAdvise = true;
             }
         }
 
@@ -99,13 +104,15 @@ namespace MXAccesRestAPI.MXDataHolder
         public void AdviseDevice(string device_name)
         {
 
-            var items = _dataStore.Where(a => a.Value.TagName.StartsWith(device_name) && a.Value.CurrentThread == threadNumber).Select(a => a);
+            List<MXAttribute> items = _dataProvider.GetInstanceData(device_name);
+            // exclude other thread objects
+            items = items.Where(a => a.CurrentThread == threadNumber).Select(a => a).ToList();
             foreach (var item in items)
             {
-                if (!item.Value.OnAdvise)
+                if (!item.OnAdvise)
                 {
                     _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
-                    item.Value.OnAdvise = true;
+                    item.OnAdvise = true;
                 }
             }
 
@@ -116,22 +123,15 @@ namespace MXAccesRestAPI.MXDataHolder
         /// </summary>
         public void AdviseAll()
         {
-
-            if (_dataStore.IsEmpty)
+            List<MXAttribute> mxTags = _dataProvider.GetAllData();
+            // exclude other thread objects
+            mxTags = mxTags.Where(a => a.CurrentThread == threadNumber).Select(a => a).ToList();
+            foreach (MXAttribute item in mxTags)
             {
-                return;
-            }
-            foreach (var item in _dataStore)
-            {
-                if (item.Value.CurrentThread != threadNumber)
-                {
-                    // obj instance of different thread
-                    continue;
-                }
-                if (!item.Value.OnAdvise)
+                if (!item.OnAdvise)
                 {
                     _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
-                    item.Value.OnAdvise = true;
+                    item.OnAdvise = true;
                 }
             }
         }
@@ -154,17 +154,19 @@ namespace MXAccesRestAPI.MXDataHolder
         /// Add Tag to tag store
         /// </summary>
         /// <param name="item"></param>
-        public void AddItem(MXAttribute item)
+        public void AddItem(string tagname)
         {
-            item.CurrentThread ??= threadNumber;
+
             if (LXMRegistered())
             {
                 try
                 {
+                    int itemId = _LmxServer.AddItem(_hLmxServerId, tagname);
+                    int key = GetThreadFormattedKey(itemId);
 
-                    int key = GetThreadFormattedKey(_LmxServer.AddItem(_hLmxServerId, item.TagName));
+                    var item = new MXAttribute { TagName = tagname, Key = itemId, CurrentThread = threadNumber };
 
-                    bool succcess = _dataStore.TryAdd(key, item);
+                    bool succcess = _dataProvider.AddItem(item);
                     if (!succcess)
                     {
                         Console.WriteLine($"[thread {threadNumber}] > fail to add item [{key}] [{item.TagName}]");
@@ -176,60 +178,22 @@ namespace MXAccesRestAPI.MXDataHolder
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"");
+                    Console.WriteLine($"Error adding item -> {e.Message}");
                 }
-
-
 
             }
         }
 
-
-
-        /// <summary>
-        /// Adds a group of MXAttribute items to the data store
-        /// </summary>
-        /// <param name="items"></param>
-        public void AddGroupItem(IEnumerable<MXAttribute> items)
-        {
-
-            if (LXMRegistered())
-            {
-                foreach (var item in items)
-                {
-                    item.CurrentThread ??= threadNumber;
-                    if (item.TagName != null)
-                    {
-                        int key = GetThreadFormattedKey(_LmxServer.AddItem(_hLmxServerId, item.TagName));
-                        _dataStore.TryAdd(key, item);
-                        NotifyDataStoreChange(key, item, DataStoreChangeType.ADDED);
-                    }
-                }
-            }
-        }
 
         /// <summary>
         /// Unsubscribes from updates for all tags
         /// </summary>
         public void UnAdviseAll()
         {
-            foreach (var item in _dataStore)
-                Unadvise(item.Value.TagName);
+            foreach (var item in _dataProvider.GetAllData())
+                Unadvise(item.Key);
         }
 
-        /// <summary>
-        /// Unsubscribes from updates for a specific tag
-        /// </summary>
-        /// <param name="value"></param>
-        public void Unadvise(string value)
-        {
-            var item = _dataStore.FirstOrDefault(a => a.Value.TagName == value && a.Value.CurrentThread == threadNumber);
-            if (item.Value != null && item.Value.OnAdvise)
-            {
-                _LmxServer.UnAdvise(_hLmxServerId, GetLmxTagKey(item.Key));
-                item.Value.OnAdvise = false;
-            }
-        }
 
         /// <summary>
         /// Unsubscribes from updates for a specific tag by index
@@ -237,11 +201,17 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <param name="index">Datastore key</param>
         public void Unadvise(int index)
         {
+            MXAttribute? mxTag = _dataProvider.GetData(index);
+            if (mxTag == null)
+            {
+                return;
+            }
 
-            if (_dataStore[index].OnAdvise && _dataStore[index].CurrentThread == threadNumber)
+
+            if (mxTag.OnAdvise && mxTag.CurrentThread == threadNumber)
             {
                 _LmxServer.UnAdvise(_hLmxServerId, index);
-                _dataStore[index].OnAdvise = false;
+                mxTag.OnAdvise = false;
             }
         }
 
@@ -252,11 +222,8 @@ namespace MXAccesRestAPI.MXDataHolder
         {
             UnAdviseAll();
 
-            if (_dataStore.Count != 0)
-            {
-                foreach (var item in _dataStore)
-                    RemoveData(item.Key);
-            }
+            foreach (var item in _dataProvider.GetAllData())
+                RemoveData(item.Key);
         }
 
         /// <summary>
@@ -266,22 +233,26 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <returns></returns>
         public bool RemoveData(string tagName)
         {
-            var item = _dataStore.FirstOrDefault(a => a.Value.TagName == tagName);
-            if (item.Value == null)
-                return false;
-            if (item.Value.OnAdvise)
+            MXAttribute? tag = _dataProvider.GetData(tagName);
+
+            if (tag?.Value == null)
             {
-                Unadvise(tagName);
+                return true;
+            }
+            else
+            {
+                Unadvise(tag.Key);
             }
 
-            if (!_dataStore.IsEmpty)
+            _LmxServer.RemoveItem(_hLmxServerId, GetLmxTagKey(tag.Key));
+            NotifyDataStoreChange(tag.Key, tag, DataStoreChangeType.REMOVED);
+            bool isSuccess = _dataProvider.RemoveData(tag.Key);
+            if (isSuccess)
             {
-                _LmxServer.RemoveItem(_hLmxServerId, GetLmxTagKey(item.Key));
-                _dataStore.TryRemove(item);
-                NotifyDataStoreChange(item.Key, item.Value, DataStoreChangeType.REMOVED);
-
+                return true;
             }
-            return true;
+
+            return false;
         }
 
         /// <summary>
@@ -295,18 +266,27 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <returns></returns>
         public bool RemoveData(int id)
         {
-            if (_dataStore[id].OnAdvise)
+
+            MXAttribute? tag = _dataProvider.GetData(id);
+
+            if (tag?.Value == null)
             {
-                Unadvise(_dataStore[id].TagName);
+                return true;
             }
-            _LmxServer.RemoveItem(_hLmxServerId, GetLmxTagKey(id));
-            _dataStore.TryRemove(id, out var valueRemoved);
-            if (valueRemoved != null)
+            else
             {
-                NotifyDataStoreChange(id, valueRemoved, DataStoreChangeType.REMOVED);
+                Unadvise(tag.Key);
             }
 
-            return true;
+            _LmxServer.RemoveItem(_hLmxServerId, GetLmxTagKey(tag.Key));
+            bool isSuccess = _dataProvider.RemoveData(id);
+            if (isSuccess)
+            {
+                NotifyDataStoreChange(tag.Key, tag, DataStoreChangeType.REMOVED);
+                return true;
+            }
+
+            return false;
         }
 
 
@@ -380,7 +360,8 @@ namespace MXAccesRestAPI.MXDataHolder
             {
 
                 full_tag_name = tag_name + "." + attribute;
-                AddItem(new MXAttribute { TagName = full_tag_name });
+
+                AddItem(full_tag_name);
             }
             AdviseDevice(tag_name);
         }
@@ -398,7 +379,8 @@ namespace MXAccesRestAPI.MXDataHolder
         {
 
             int threadTagKey = GetThreadFormattedKey(phItemHandle);
-            MXAttribute? mxAttr = _dataStore[threadTagKey];
+
+            MXAttribute? mxAttr = _dataProvider.GetData(threadTagKey);
 
             // Console.WriteLine($"LMX_OnDataChange [thread {threadNumber}] [{threadTagKey}] [{mxAttr?.TagName}]");
 
@@ -471,12 +453,12 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <exception cref="Exception"></exception>
         public void WriteData(string tagName, object value, DateTime? timeStamp = null)
         {
-            var item = _dataStore.FirstOrDefault(a => a.Value.TagName == tagName);
-            if (item.Value == null)
+            MXAttribute? item = _dataProvider.GetData(tagName);
+            if (item?.Value == null)
             {
                 throw new Exception("Item was not found");
             }
-            if (item.Value.OnAdvise)
+            if (item.OnAdvise)
             {
                 if (timeStamp != null)
                 {
@@ -523,11 +505,7 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <returns></returns>
         public MXAttribute? GetData(int key)
         {
-            if (!_dataStore.TryGetValue(key, out MXAttribute? value))
-            {
-                return null;
-            }
-            return value.Value as MXAttribute;
+            return _dataProvider.GetData(key);
         }
 
         /// <summary>
@@ -537,48 +515,33 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <returns></returns>
         public MXAttribute? GetData(string tagname)
         {
-            var item = _dataStore.FirstOrDefault(a => a.Value.TagName == tagname);
-            if (item.Value == null)
-            {
-                return null;
-            }
-            return item.Value;
+            return _dataProvider.GetData(tagname);
         }
 
         public int GetCount()
         {
-            return _dataStore.Count;
+            return GetAllData().Count;
         }
 
-        public List<MXAttribute> GetInstanceData(string tag_name)
+        public List<MXAttribute> GetInstanceData(string tagname)
         {
-            return _dataStore
-                    .Where(kvp => kvp.Value.TagName.StartsWith(tag_name))
-                    .Select(kvp => kvp.Value)
-                    .ToList();
+            return _dataProvider.GetInstanceData(tagname);
         }
 
         public List<MXAttribute> GetBadAndUncertainData()
         {
-            return _dataStore
-                    .Where(kvp => !GlobalConstants.IsGood(kvp.Value.Quality))
-                    .Select(kvp => kvp.Value)
-                    .ToList();
+            return _dataProvider.GetBadAndUncertainData();
         }
 
         public List<MXAttribute> GetBadAndUncertainData(string instance)
         {
-            return _dataStore
-                    .Where(kvp => !GlobalConstants.IsGood(kvp.Value.Quality) && kvp.Value.TagName.StartsWith(instance))
-                    .Select(kvp => kvp.Value)
-                    .ToList();
+            return _dataProvider.GetBadAndUncertainData(instance);
+
         }
 
         public List<MXAttribute> GetAllData()
         {
-            return _dataStore
-                    .Select(kvp => kvp.Value)
-                    .ToList();
+            return _dataProvider.GetAllData();
         }
     }
 }

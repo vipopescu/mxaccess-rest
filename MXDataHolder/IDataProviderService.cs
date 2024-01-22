@@ -10,6 +10,12 @@ namespace MXAccesRestAPI.MXDataHolder
         List<MXAttribute> GetBadAndUncertainData();
         List<MXAttribute> GetBadAndUncertainData(string instance);
         List<MXAttribute> GetAllData();
+
+        bool AddItem(MXAttribute item);
+
+        bool RemoveData(string tagName);
+
+        bool RemoveData(int id);
     }
 
 }

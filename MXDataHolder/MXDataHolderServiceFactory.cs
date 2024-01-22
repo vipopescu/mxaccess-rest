@@ -7,19 +7,19 @@ using MXAccesRestAPI.Settings;
 
 namespace MXAccesRestAPI.MXDataHolder
 {
-    public class MXDataHolderServiceFactory(ConcurrentDictionary<int, MXAttribute> datastore, IOptions<MxDataDataServiceSettings> settings, AttributeConfigSettings attributeConfig) : IMXDataHolderServiceFactory
+    public class MXDataHolderServiceFactory(IDataProviderService dataProviderService, IOptions<MxDataDataServiceSettings> settings, AttributeConfigSettings attributeConfig) : IMXDataHolderServiceFactory
     {
-
+        
         private readonly ConcurrentDictionary<int, MXDataHolderService> _services = [];
         private readonly ConcurrentDictionary<int, AlarmDataMonitor> _alarmMonitors = [];
 
-        private readonly ConcurrentDictionary<int, MXAttribute> _datastore = datastore;
+        private readonly IDataProviderService _dataProvider = dataProviderService;
         private readonly MxDataDataServiceSettings _settings = settings.Value;
         private readonly AttributeConfigSettings _attributeConfig = attributeConfig;
 
         public MXDataHolderService Create(int threadNumber)
         {
-            var service = new MXDataHolderService(threadNumber, _settings.ServerName, _settings.LmxVerifyUser, _attributeConfig.AllowedTagAttributes, _datastore);
+            var service = new MXDataHolderService(threadNumber, _settings.ServerName, _settings.LmxVerifyUser, _attributeConfig.AllowedTagAttributes, _dataProvider);
 
             bool isSuccess = _services.TryAdd(threadNumber, service);
             if (!isSuccess)

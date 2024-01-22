@@ -37,9 +37,7 @@ namespace MXAccesRestAPI
                 JsonSerializer.Deserialize<AttributeConfigSettings>(File.ReadAllText(Path.Combine(basePath, attributeConfPath))) ?? throw new InvalidOperationException($"Attribute Config error: {attributeConfPath}");
 
             builder.Services.AddSingleton<AttributeConfigSettings>(attributeConfig);
-
-            // MxAttribute store
-            builder.Services.AddSingleton<ConcurrentDictionary<int, MXAttribute>>(new ConcurrentDictionary<int, MXAttribute>());
+            builder.Services.AddSingleton<IDataProviderService, MxDataProviderService>();
 
             // Register MXDataHolderServiceFactory with dependencies
             builder.Services.AddSingleton<IMXDataHolderServiceFactory, MXDataHolderServiceFactory>();

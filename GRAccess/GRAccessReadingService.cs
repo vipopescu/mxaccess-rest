@@ -91,7 +91,7 @@ namespace MXAccesRestAPI.GRAccess
                      foreach (string tag_name in segment)
                      {
                          string fullRefName = tag_name + "._Attributes";
-                         mxDataHolderService.AddItem(new MXAttribute { TagName = fullRefName });
+                         mxDataHolderService.AddItem(fullRefName);
                      }
 
                      mxDataHolderService.AdviseAll();
