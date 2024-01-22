@@ -165,7 +165,7 @@ namespace MXAccesRestAPI.MXDataHolder
                     int itemId = _LmxServer.AddItem(_hLmxServerId, tagname);
                     int key = GetThreadFormattedKey(itemId);
 
-                    var item = new MXAttribute { TagName = tagname, Key = itemId, CurrentThread = threadNumber };
+                    MXAttribute item = new() { TagName = tagname, Key = key, CurrentThread = threadNumber };
 
                     bool succcess = _dataProvider.AddItem(item);
                     if (!succcess)
