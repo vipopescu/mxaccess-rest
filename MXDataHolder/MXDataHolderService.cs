@@ -68,9 +68,14 @@ namespace MXAccesRestAPI.MXDataHolder
             //}
 
             var itemsNotInitialized = _dataStore.Where(a => a.Value.CurrentThread == _threadNumber && !a.Value.initialized).Select(a => a).Count();
-            if (itemsNotInitialized == 0)
+            if (itemsNotInitialized != 0)
             {
                 Console.WriteLine($"{DateTime.Now.ToString()} -> Thread [{_threadNumber}] have {itemsNotInitialized} items not initalizaed...");
+                //timer.Enabled = false;
+            }
+            else
+            {
+                Console.WriteLine($"{DateTime.Now.ToString()} -> Thread [{_threadNumber}] all initialised");
                 timer.Enabled = false;
             }
         }
