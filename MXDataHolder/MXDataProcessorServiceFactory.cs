@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
 using System.Timers;
 using Microsoft.Extensions.Options;
 using MXAccesRestAPI.Classes;
@@ -11,6 +12,7 @@ namespace MXAccesRestAPI.MXDataHolder
     {
         private readonly System.Timers.Timer _timer = new();
         private int _lastTagCount = -1;
+        private int _counter = 0;
 
 
         private readonly ConcurrentDictionary<int, MXDataProcessorService> _services = [];
@@ -29,7 +31,7 @@ namespace MXAccesRestAPI.MXDataHolder
         public void RegisterOnInitializationComplete()
         {
             _timer.Enabled = false;
-            _timer.Interval = 5000;
+            _timer.Interval = 2000;
 
             if (!_timer.Enabled)
             {
@@ -42,17 +44,68 @@ namespace MXAccesRestAPI.MXDataHolder
         {
             List<string> items = _dataProvider.GetAllTags();
 
+            if(items.Count == 0)
+            {
+                return;
+            }
+
             if (items.Count != _lastTagCount)
             {
                 // still adddin tags
                 Console.WriteLine($"{DateTime.Now} -> Initialised {items.Count} so far ...");
+                _lastTagCount = items.Count;
+                _counter = 0;
+            }
+           
+              else if (_counter == 3)
+            {
+                _timer.Enabled = false;
+                Console.WriteLine($"{DateTime.Now} -> Initialised {items.Count} DONE");
+                DistributeTagsAcrossThreads();
+                
             }
             else
             {
-                Console.WriteLine($"{DateTime.Now} -> Initialised {items.Count} DONE");
+                _counter++;
+                Console.WriteLine($"{DateTime.Now} -> Initialised {items.Count} so far ...");
             }
         }
 
+
+        private void DistributeTagsAcrossThreads()
+        {
+
+            int numberOfThreads = _services.Keys.Count;
+            string[] tags = [.. _dataProvider.GetAllTags()];
+            if(tags.Length == 0) {
+                return;
+            }
+            int segmentSize = tags.Length / numberOfThreads;
+            int counterI = 0;
+
+            
+            foreach(MXDataProcessorService serviceVal in _services.Values)
+            {
+                int segmentStart = counterI * segmentSize;
+                int segmentEnd = (counterI == numberOfThreads - 1) ? tags.Length : segmentStart + segmentSize;
+                ArraySegment<string> segment = new(tags, segmentStart, segmentEnd - segmentStart);
+
+                foreach (string tag in segment)
+                {
+                    serviceVal.AddItem(tag);
+                }
+                serviceVal.TriggerOnAllInit(); 
+                Console.WriteLine($"{DateTime.Now} -> Service {serviceVal.threadNumber} tags [{segment.Count}]");
+                //serviceVal.AdviseAll();
+                AdviseAllForService(serviceVal);
+            }
+        }
+
+        private Task AdviseAllForService(MXDataProcessorService serviceVal)
+        {
+            serviceVal.AdviseAll();
+            return Task.CompletedTask;
+        }
 
 
 

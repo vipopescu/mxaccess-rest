@@ -90,32 +90,36 @@ namespace MXAccesRestAPI.GRAccess
                      try
                      {
                          mxDataHolderService = _imxDataHolderFactory.Create(threadIndex);
+
+
+                         foreach (string tag_name in segment)
+                         {
+                             string fullRefName = tag_name + "._Attributes";
+                             mxDataHolderService.AddItem(fullRefName);
+                         }
+
+                         mxDataHolderService.AdviseAll();
+
+                         _imxDataHolderFactory.MonitorAlarmsOnThread(threadIndex);
                      }
                      catch (Exception e)
                      {
 
-                         if (!e.Message.Contains("E_ACCESSDENIED"))
-                         {
-                             throw;
-                         }
-                         Console.WriteLine($"Creating Service Attemp #2 [Thrd: {threadIndex}]");
-                         // Attemp 2
-                         mxDataHolderService = _imxDataHolderFactory.Create(threadIndex);
+                         Console.WriteLine($"[Thrd: {threadIndex}] Couldn't be created so it's not being used");
+
+                         //if (!e.Message.Contains("E_ACCESSDENIED"))
+                         //{
+                         //    throw;
+                         //}
+                         //Console.WriteLine($"Creating Service Attemp #2 [Thrd: {threadIndex}]");
+                         //// Attemp 2
+                         //mxDataHolderService = _imxDataHolderFactory.Create(threadIndex);
 
                      }
 
-                     foreach (string tag_name in segment)
-                     {
-                         string fullRefName = tag_name + "._Attributes";
-                         mxDataHolderService.AddItem(fullRefName);
-                     }
-
-                     mxDataHolderService.AdviseAll();
-
-                     _imxDataHolderFactory.MonitorAlarmsOnThread(threadIndex);
                  }, TaskCreationOptions.LongRunning);
 
-                Thread.Sleep(2000);
+                //Thread.Sleep(2000);
             }
 
             _imxDataHolderFactory.RegisterOnInitializationComplete();

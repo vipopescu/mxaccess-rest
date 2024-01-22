@@ -51,13 +51,26 @@ namespace MXAccesRestAPI.MXDataHolder
             Unregister();
         }
 
+
+        public void TriggerOnAllInit()
+        {
+            timer ??= new Timer(5000);
+
+            if (!timer.Enabled)
+            {
+                timer.Elapsed += OnTimedEvent;
+                timer.Enabled = true;
+            }
+        }
+
         private void OnTimedEvent(Object source, ElapsedEventArgs e)
         {
             List<MXAttribute> items = _dataProvider.GetAllData();
-            var itemsNotInitialized = items.Where(a => a.CurrentThread == threadNumber && !a.initialized).Select(a => a).Count();
-            if (itemsNotInitialized != 0)
+            var itemsNotInit = items.Where(a => a.CurrentThread == threadNumber && !a.initialized).Select(a => a);
+            var itemsNotInitializedCount = itemsNotInit.Count();
+            if (itemsNotInitializedCount != 0)
             {
-                Console.WriteLine($"{DateTime.Now} -> Thread [{threadNumber}] have {itemsNotInitialized} items not initalizaed...");
+                Console.WriteLine($"{DateTime.Now} -> Thread [{threadNumber}] have {itemsNotInitializedCount} items not initalizaed...");
             }
             else
             {
@@ -75,6 +88,8 @@ namespace MXAccesRestAPI.MXDataHolder
             //    }
             //}
         }
+
+
 
         /// <summary>
         /// Subscribes to updates for a specific tag.
@@ -124,9 +139,9 @@ namespace MXAccesRestAPI.MXDataHolder
         /// </summary>
         public void AdviseAll()
         {
-            List<MXAttribute> mxTags = _dataProvider.GetAllData();
+            List<MXAttribute> mxTagsALl = _dataProvider.GetAllData();
             // exclude other thread objects
-            mxTags = mxTags.Where(a => a.CurrentThread == threadNumber).Select(a => a).ToList();
+            List<MXAttribute> mxTags = mxTagsALl.Where(a => a.CurrentThread == threadNumber).Select(a => a).ToList();
             foreach (MXAttribute item in mxTags)
             {
                 if (!item.OnAdvise)
@@ -403,15 +418,6 @@ namespace MXAccesRestAPI.MXDataHolder
 
                             RegisterAttributes(tag_name[0], attr_list);
                             RemoveData(threadTagKey);
-
-
-                            // timer ??= new Timer(5000);
-
-                            // if (!timer.Enabled)
-                            // {
-                            //     timer.Elapsed += OnTimedEvent;
-                            //     timer.Enabled = true;
-                            // }
                         }
                         else
                         {
