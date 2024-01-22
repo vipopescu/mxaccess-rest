@@ -42,8 +42,8 @@ namespace MXAccesRestAPI.MXDataHolder
             _lmxVerifyUser = lmxVerifyUser;
             _userLmxId = 0;
             Register();
-            RegisterOnDataWrite();
             // RegisterUser(); // TODO: disabled for now, but will need when writing values
+            RegisterOnDataWrite();
         }
         ~MXDataHolderService()
         {

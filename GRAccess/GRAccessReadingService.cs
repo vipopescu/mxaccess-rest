@@ -86,7 +86,22 @@ namespace MXAccesRestAPI.GRAccess
                 Task.Factory.StartNew(() =>
                  {
                      int threadIndex = locali + 1; // Fix for closure issue
-                     var mxDataHolderService = _imxDataHolderFactory.Create(threadIndex);
+                     MXDataHolderService mxDataHolderService;
+                     try {
+                         mxDataHolderService = _imxDataHolderFactory.Create(threadIndex);
+                     }
+                     catch(Exception e)
+                     {
+                         
+                         if (!e.Message.Contains("E_ACCESSDENIED"))
+                         {
+                             throw;
+                         }
+                         Console.WriteLine($"Creating Service Attemp #2 [Thrd: {threadIndex}]");
+                         // Attemp 2
+                         mxDataHolderService = _imxDataHolderFactory.Create(threadIndex);
+
+                     }
 
                      foreach (string tag_name in segment)
                      {
