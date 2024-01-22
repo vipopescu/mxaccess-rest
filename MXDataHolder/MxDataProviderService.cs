@@ -70,10 +70,12 @@ namespace MXAccesRestAPI.MXDataHolder
 
         public bool RemoveData(string tagName)
         {
-            var item = _mxDataStore.FirstOrDefault(a => a.Value.TagName == tagName);
-            if (item.Value == null)
-                return false;
-            return _mxDataStore.TryRemove(item);
+            var item = GetData(tagName);
+            if(item == null)
+            {
+                return true;
+            }
+            return RemoveData(item.Key);
 
         }
 

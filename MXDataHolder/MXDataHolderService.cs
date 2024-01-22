@@ -200,9 +200,9 @@ namespace MXAccesRestAPI.MXDataHolder
         /// Unsubscribes from updates for a specific tag by index
         /// </summary>
         /// <param name="index">Datastore key</param>
-        public void Unadvise(int index)
+        public void Unadvise(int tagKey)
         {
-            MXAttribute? mxTag = _dataProvider.GetData(index);
+            MXAttribute? mxTag = _dataProvider.GetData(tagKey);
             if (mxTag == null)
             {
                 return;
@@ -211,7 +211,8 @@ namespace MXAccesRestAPI.MXDataHolder
 
             if (mxTag.OnAdvise && mxTag.CurrentThread == threadNumber)
             {
-                _LmxServer.UnAdvise(_hLmxServerId, index);
+                int lmxKey = GetLmxTagKey(tagKey);
+                _LmxServer.UnAdvise(_hLmxServerId, lmxKey);
                 mxTag.OnAdvise = false;
             }
         }
@@ -236,7 +237,7 @@ namespace MXAccesRestAPI.MXDataHolder
         {
             MXAttribute? tag = _dataProvider.GetData(tagName);
 
-            if (tag?.Value == null)
+            if (tag == null)
             {
                 return true;
             }
@@ -247,13 +248,7 @@ namespace MXAccesRestAPI.MXDataHolder
 
             _LmxServer.RemoveItem(_hLmxServerId, GetLmxTagKey(tag.Key));
             NotifyDataStoreChange(tag.Key, tag, DataStoreChangeType.REMOVED);
-            bool isSuccess = _dataProvider.RemoveData(tag.Key);
-            if (isSuccess)
-            {
-                return true;
-            }
-
-            return false;
+            return _dataProvider.RemoveData(tag.Key);
         }
 
         /// <summary>
@@ -270,7 +265,7 @@ namespace MXAccesRestAPI.MXDataHolder
 
             MXAttribute? tag = _dataProvider.GetData(id);
 
-            if (tag?.Value == null)
+            if (tag == null)
             {
                 return true;
             }
@@ -280,14 +275,8 @@ namespace MXAccesRestAPI.MXDataHolder
             }
 
             _LmxServer.RemoveItem(_hLmxServerId, GetLmxTagKey(tag.Key));
-            bool isSuccess = _dataProvider.RemoveData(id);
-            if (isSuccess)
-            {
-                NotifyDataStoreChange(tag.Key, tag, DataStoreChangeType.REMOVED);
-                return true;
-            }
-
-            return false;
+            NotifyDataStoreChange(tag.Key, tag, DataStoreChangeType.REMOVED);
+            return _dataProvider.RemoveData(tag.Key);
         }
 
 
