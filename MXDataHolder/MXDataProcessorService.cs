@@ -360,9 +360,10 @@ namespace MXAccesRestAPI.MXDataHolder
 
                 full_tag_name = tag_name + "." + attribute;
 
-                AddItem(full_tag_name);
+                _dataProvider.AddTag(full_tag_name);
+                // AddItem(full_tag_name);
             }
-            AdviseDevice(tag_name);
+            // AdviseDevice(tag_name);
         }
 
         /// <summary>
@@ -404,13 +405,13 @@ namespace MXAccesRestAPI.MXDataHolder
                             RemoveData(threadTagKey);
 
 
-                            timer ??= new Timer(5000);
+                            // timer ??= new Timer(5000);
 
-                            if (!timer.Enabled)
-                            {
-                                timer.Elapsed += OnTimedEvent;
-                                timer.Enabled = true;
-                            }
+                            // if (!timer.Enabled)
+                            // {
+                            //     timer.Elapsed += OnTimedEvent;
+                            //     timer.Enabled = true;
+                            // }
                         }
                         else
                         {

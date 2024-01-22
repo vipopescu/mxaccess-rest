@@ -15,10 +15,28 @@ namespace MXAccesRestAPI.MXDataHolder
 
         public event IDataProviderService.OnDataWriteChangeEventHandler? OnDataWrite;
 
+        private readonly ConcurrentDictionary<string, string> _allTagNames = [];
+
+
+        public bool AddTag(string tag)
+        {
+            return _allTagNames.TryAdd(tag, tag);
+        }
+
+        public List<string> GetAllTags()
+        {
+            return [.. _allTagNames.Values];
+        }
+
+
+
         public bool AddItem(MXAttribute item)
         {
             return _mxDataStore.TryAdd(item.Key, item);
         }
+
+
+
 
         public List<MXAttribute> GetAllData()
         {
@@ -71,7 +89,7 @@ namespace MXAccesRestAPI.MXDataHolder
         public bool RemoveData(string tagName)
         {
             var item = GetData(tagName);
-            if(item == null)
+            if (item == null)
             {
                 return true;
             }

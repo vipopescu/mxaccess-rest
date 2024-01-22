@@ -13,6 +13,8 @@ namespace MXAccesRestAPI.MXDataHolder
         void StopMonitorAlarmsOnThread(int threadNumber);
 
 
+        void RegisterOnInitializationComplete();
+
     }
 
 }

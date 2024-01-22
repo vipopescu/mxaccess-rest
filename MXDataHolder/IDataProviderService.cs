@@ -12,6 +12,8 @@ namespace MXAccesRestAPI.MXDataHolder
         event OnDataWriteChangeEventHandler? OnDataWrite;
         void WriteData(string tagName, object value, DateTime? timeStamp);
 
+        bool AddTag(string tag);
+        List<string> GetAllTags();
 
         MXAttribute? GetData(int key);
         MXAttribute? GetData(string tagName);

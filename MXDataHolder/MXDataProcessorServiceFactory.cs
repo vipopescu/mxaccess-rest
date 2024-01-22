@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using System.Linq.Expressions;
+using System.Timers;
 using Microsoft.Extensions.Options;
 using MXAccesRestAPI.Classes;
 using MXAccesRestAPI.Monitoring;
@@ -9,6 +9,9 @@ namespace MXAccesRestAPI.MXDataHolder
 {
     public class MXDataProcessorServiceFactory(IDataProviderService dataProviderService, IOptions<MxDataDataServiceSettings> settings, AttributeConfigSettings attributeConfig) : IMXDataHolderServiceFactory
     {
+        private readonly System.Timers.Timer _timer = new();
+        private int _lastTagCount = -1;
+
 
         private readonly ConcurrentDictionary<int, MXDataProcessorService> _services = [];
         private readonly ConcurrentDictionary<int, AlarmDataMonitor> _alarmMonitors = [];
@@ -16,6 +19,42 @@ namespace MXAccesRestAPI.MXDataHolder
         private readonly IDataProviderService _dataProvider = dataProviderService;
         private readonly MxDataDataServiceSettings _settings = settings.Value;
         private readonly AttributeConfigSettings _attributeConfig = attributeConfig;
+
+
+
+
+        /// <summary>
+        /// Register for an event when all tags are initialised
+        /// </summary>
+        public void RegisterOnInitializationComplete()
+        {
+            _timer.Enabled = false;
+            _timer.Interval = 5000;
+
+            if (!_timer.Enabled)
+            {
+                _timer.Elapsed += OnTimedEvent;
+                _timer.Enabled = true;
+            }
+        }
+
+        private void OnTimedEvent(Object source, ElapsedEventArgs e)
+        {
+            List<string> items = _dataProvider.GetAllTags();
+
+            if (items.Count != _lastTagCount)
+            {
+                // still adddin tags
+                Console.WriteLine($"{DateTime.Now} -> Initialised {items.Count} so far ...");
+            }
+            else
+            {
+                Console.WriteLine($"{DateTime.Now} -> Initialised {items.Count} DONE");
+            }
+        }
+
+
+
 
         public MXDataProcessorService Create(int threadNumber)
         {

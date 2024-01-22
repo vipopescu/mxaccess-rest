@@ -117,6 +117,8 @@ namespace MXAccesRestAPI.GRAccess
 
                 Thread.Sleep(2000);
             }
+
+            _imxDataHolderFactory.RegisterOnInitializationComplete();
         }
 
 
