@@ -3,7 +3,7 @@ namespace MXAccesRestAPI.MXDataHolder
     public interface IMXDataHolderServiceFactory
     {
 
-        MXDataHolderService Create(int threadNumber);
+        MXDataProcessorService Create(int threadNumber);
 
         void StartMonitoringAlarms();
         void StopMonitoringAlarms();

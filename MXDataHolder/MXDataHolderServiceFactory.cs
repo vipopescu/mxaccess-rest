@@ -9,17 +9,17 @@ namespace MXAccesRestAPI.MXDataHolder
 {
     public class MXDataHolderServiceFactory(IDataProviderService dataProviderService, IOptions<MxDataDataServiceSettings> settings, AttributeConfigSettings attributeConfig) : IMXDataHolderServiceFactory
     {
-        
-        private readonly ConcurrentDictionary<int, MXDataHolderService> _services = [];
+
+        private readonly ConcurrentDictionary<int, MXDataProcessorService> _services = [];
         private readonly ConcurrentDictionary<int, AlarmDataMonitor> _alarmMonitors = [];
 
         private readonly IDataProviderService _dataProvider = dataProviderService;
         private readonly MxDataDataServiceSettings _settings = settings.Value;
         private readonly AttributeConfigSettings _attributeConfig = attributeConfig;
 
-        public MXDataHolderService Create(int threadNumber)
+        public MXDataProcessorService Create(int threadNumber)
         {
-            var service = new MXDataHolderService(threadNumber, _settings.ServerName, _settings.LmxVerifyUser, _attributeConfig.AllowedTagAttributes, _dataProvider);
+            var service = new MXDataProcessorService(threadNumber, _settings.ServerName, _settings.LmxVerifyUser, _attributeConfig.AllowedTagAttributes, _dataProvider);
 
             bool isSuccess = _services.TryAdd(threadNumber, service);
             if (!isSuccess)
@@ -58,7 +58,7 @@ namespace MXAccesRestAPI.MXDataHolder
 
         public void MonitorAlarmsOnThread(int threadNumber)
         {
-            MXDataHolderService service = _services[threadNumber];
+            MXDataProcessorService service = _services[threadNumber];
             AlarmDataMonitor alarmMonitor = new(service, threadNumber);
 
             bool isSuccess = _alarmMonitors.TryAdd(threadNumber, alarmMonitor);

@@ -8,7 +8,7 @@ using Timer = System.Timers.Timer;
 namespace MXAccesRestAPI.MXDataHolder
 {
 
-    public class MXDataHolderService : IMXDataHolderService
+    public class MXDataProcessorService : IMXDataHolderService
     {
 
         private System.Timers.Timer timer;
@@ -31,7 +31,7 @@ namespace MXAccesRestAPI.MXDataHolder
         private int _userLmxId;
 
 
-        public MXDataHolderService(int threadNumber, string serverName, string lmxVerifyUser, List<string> allowedAttributes, IDataProviderService dataProvider)
+        public MXDataProcessorService(int threadNumber, string serverName, string lmxVerifyUser, List<string> allowedAttributes, IDataProviderService dataProvider)
         {
 
             this.threadNumber = threadNumber;
@@ -45,7 +45,7 @@ namespace MXAccesRestAPI.MXDataHolder
             // RegisterUser(); // TODO: disabled for now, but will need when writing values
             RegisterOnDataWrite();
         }
-        ~MXDataHolderService()
+        ~MXDataProcessorService()
         {
             Console.WriteLine($"Destroying [thread {threadNumber}]...");
             Unregister();
