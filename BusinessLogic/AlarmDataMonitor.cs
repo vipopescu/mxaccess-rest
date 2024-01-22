@@ -17,10 +17,13 @@ namespace MXAccesRestAPI.Monitoring
 
         private bool isActive = false;
 
+        private readonly int _threadNumber;
 
-        public AlarmDataMonitor(IMXDataHolderService dataHolderService)
+
+        public AlarmDataMonitor(IMXDataHolderService dataHolderService, int threadNumber)
         {
 
+            _threadNumber = threadNumber;
             _dataHolderService = dataHolderService;
             StartMonitoring();
         }
@@ -61,13 +64,13 @@ namespace MXAccesRestAPI.Monitoring
             switch (changeType)
             {
                 case DataStoreChangeType.ADDED:
-                    Console.WriteLine($"NEW      [ {data.TagName} ]");
+                    Console.WriteLine($"T[{_threadNumber}] NEW      [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.REMOVED:
-                    Console.WriteLine($"REMOVED  [ {data.TagName} ]");
+                    Console.WriteLine($"T[{_threadNumber}]REMOVED  [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.MODIFIED:
-                    Console.WriteLine($"MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
+                    Console.WriteLine($"T[{_threadNumber}]MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
 
 
                     if (AlarmRegex().IsMatch(data.TagName))
@@ -130,7 +133,7 @@ namespace MXAccesRestAPI.Monitoring
             _dataHolderService.WriteData(alarmListArrRef, descriptions, DateTime.Now);
             if (descriptions.Count > 0)
             {
-                Console.WriteLine($"AlarmList [ {alarmListArrRef} ] VAL -> {string.Join(',', descriptions)}");
+                Console.WriteLine($"T[{_threadNumber}] AlarmList [ {alarmListArrRef} ] VAL -> {string.Join(',', descriptions)}");
             }
 
         }
@@ -205,7 +208,7 @@ namespace MXAccesRestAPI.Monitoring
             _dataHolderService.WriteData(alarmListArrRef, descriptions, DateTime.Now);
             if (descriptions.Count > 0)
             {
-                Console.WriteLine($"EventsFaultAlarm [ {alarmListArrRef} ] VAL -> {string.Join(',', descriptions)}");
+                Console.WriteLine($"T[{_threadNumber}] EventsFaultAlarm [ {alarmListArrRef} ] VAL -> {string.Join(',', descriptions)}");
             }
 
 

@@ -59,7 +59,7 @@ namespace MXAccesRestAPI.MXDataHolder
         public void MonitorAlarmsOnThread(int threadNumber)
         {
             MXDataHolderService service = _services[threadNumber];
-            AlarmDataMonitor alarmMonitor = new(service);
+            AlarmDataMonitor alarmMonitor = new(service, threadNumber);
 
             bool isSuccess = _alarmMonitors.TryAdd(threadNumber, alarmMonitor);
             if (!isSuccess)
