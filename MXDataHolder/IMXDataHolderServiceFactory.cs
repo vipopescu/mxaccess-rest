@@ -4,6 +4,15 @@ namespace MXAccesRestAPI.MXDataHolder
     {
 
         MXDataHolderService Create(int threadNumber);
+
+        void StartMonitoringAlarms();
+        void StopMonitoringAlarms();
+
+
+        void MonitorAlarmsOnThread(int threadNumber);
+        void StopMonitorAlarmsOnThread(int threadNumber);
+
+
     }
 
 }

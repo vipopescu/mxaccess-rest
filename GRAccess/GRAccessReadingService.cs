@@ -95,6 +95,8 @@ namespace MXAccesRestAPI.GRAccess
                      }
 
                      mxDataHolderService.AdviseAll();
+                     
+                     _imxDataHolderFactory.MonitorAlarmsOnThread(threadIndex);
                  }, TaskCreationOptions.LongRunning);
             }
         }

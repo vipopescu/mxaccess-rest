@@ -1,28 +1,78 @@
 using System.Collections.Concurrent;
+using System.Linq.Expressions;
 using Microsoft.Extensions.Options;
 using MXAccesRestAPI.Classes;
+using MXAccesRestAPI.Monitoring;
 using MXAccesRestAPI.Settings;
 
 namespace MXAccesRestAPI.MXDataHolder
 {
-    public class MXDataHolderServiceFactory : IMXDataHolderServiceFactory
+    public class MXDataHolderServiceFactory(ConcurrentDictionary<int, MXAttribute> datastore, IOptions<MxDataDataServiceSettings> settings, AttributeConfigSettings attributeConfig) : IMXDataHolderServiceFactory
     {
-        private readonly ConcurrentDictionary<int, MXAttribute> _datastore;
-        private readonly MxDataDataServiceSettings _settings;
-        private readonly AttributeConfigSettings _attributeConfig;
 
+        private readonly ConcurrentDictionary<int, MXDataHolderService> _services = [];
+        private readonly ConcurrentDictionary<int, AlarmDataMonitor> _alarmMonitors = [];
 
-
-        public MXDataHolderServiceFactory(ConcurrentDictionary<int, MXAttribute> datastore, IOptions<MxDataDataServiceSettings> settings, AttributeConfigSettings attributeConfig)
-        {
-            _datastore = datastore;
-            _settings = settings.Value;
-            _attributeConfig = attributeConfig;
-        }
+        private readonly ConcurrentDictionary<int, MXAttribute> _datastore = datastore;
+        private readonly MxDataDataServiceSettings _settings = settings.Value;
+        private readonly AttributeConfigSettings _attributeConfig = attributeConfig;
 
         public MXDataHolderService Create(int threadNumber)
         {
-            return new MXDataHolderService(threadNumber, _settings.ServerName,_settings.LmxVerifyUser, _attributeConfig.AllowedTagAttributes, _datastore);
+            var service = new MXDataHolderService(threadNumber, _settings.ServerName, _settings.LmxVerifyUser, _attributeConfig.AllowedTagAttributes, _datastore);
+
+            bool isSuccess = _services.TryAdd(threadNumber, service);
+            if (!isSuccess)
+            {
+                throw new InvalidOperationException($"Failed to add MXDataHolderService for thread number {threadNumber}. A service with the same thread number may already exist.");
+            }
+            return service;
+        }
+
+        /// <summary>
+        /// Start monitoring alarms on all threads
+        /// </summary>
+        /// <exception cref="InvalidOperationException"></exception>
+        public void StartMonitoringAlarms()
+        {
+
+            foreach (int threadNo in _services.Keys)
+            {
+                MonitorAlarmsOnThread(threadNo);
+            }
+        }
+
+        /// <summary>
+        /// Stop monitoring alarms on all threads
+        /// </summary>
+        /// <exception cref="InvalidOperationException"></exception>
+        public void StopMonitoringAlarms()
+        {
+
+            foreach (int threadNo in _alarmMonitors.Keys)
+            {
+                StopMonitorAlarmsOnThread(threadNo);
+            }
+        }
+
+
+        public void MonitorAlarmsOnThread(int threadNumber)
+        {
+            MXDataHolderService service = _services[threadNumber];
+            AlarmDataMonitor alarmMonitor = new(service);
+
+            bool isSuccess = _alarmMonitors.TryAdd(threadNumber, alarmMonitor);
+            if (!isSuccess)
+            {
+                throw new InvalidOperationException($"Failed to start AlarmMonitor for thread number {threadNumber}. A service with the same thread number may already exist.");
+            }
+            alarmMonitor.StartMonitoring();
+        }
+
+
+        public void StopMonitorAlarmsOnThread(int threadNumber)
+        {
+            _alarmMonitors[threadNumber].StopMonitoring();
         }
     }
 

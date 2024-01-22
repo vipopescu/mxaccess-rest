@@ -49,12 +49,6 @@ namespace MXAccesRestAPI
             builder.Services.AddDbContext<GRDBContext>(options =>
                            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-
-            // Register DataStoreMonitor as a Singleton and use the same instance of MXDataHolderService
-            // TODO
-            //builder.Services.AddSingleton<AlarmDataMonitor>(new AlarmDataMonitor(mxDataHolderService));
-
-
             builder.Services.AddControllers().AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals;

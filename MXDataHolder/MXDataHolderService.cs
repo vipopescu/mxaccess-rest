@@ -17,10 +17,9 @@ namespace MXAccesRestAPI.MXDataHolder
 
         private System.Timers.Timer timer;
 
-
         // Event for data store changes
         public event DataStoreChangeEventHandler? OnDataStoreChanged;
-        private readonly int _threadNumber;
+        public readonly int threadNumber;
 
         private readonly List<string> _allowedAttributes = [];
         private readonly ConcurrentDictionary<int, MXAttribute> _dataStore;
@@ -39,7 +38,7 @@ namespace MXAccesRestAPI.MXDataHolder
         public MXDataHolderService(int threadNumber, string serverName, string lmxVerifyUser, List<string> allowedAttributes, ConcurrentDictionary<int, MXAttribute> datastore)
         {
 
-            _threadNumber = threadNumber;
+            this.threadNumber = threadNumber;
             _dataStore = datastore;
 
             _allowedAttributes = allowedAttributes;
@@ -51,7 +50,7 @@ namespace MXAccesRestAPI.MXDataHolder
         }
         ~MXDataHolderService()
         {
-            Console.WriteLine($"Destroying [thread {_threadNumber}]...");
+            Console.WriteLine($"Destroying [thread {threadNumber}]...");
             Unregister();
         }
 
@@ -67,15 +66,14 @@ namespace MXAccesRestAPI.MXDataHolder
             //    }
             //}
 
-            var itemsNotInitialized = _dataStore.Where(a => a.Value.CurrentThread == _threadNumber && !a.Value.initialized).Select(a => a).Count();
+            var itemsNotInitialized = _dataStore.Where(a => a.Value.CurrentThread == threadNumber && !a.Value.initialized).Select(a => a).Count();
             if (itemsNotInitialized != 0)
             {
-                Console.WriteLine($"{DateTime.Now.ToString()} -> Thread [{_threadNumber}] have {itemsNotInitialized} items not initalizaed...");
-                //timer.Enabled = false;
+                Console.WriteLine($"{DateTime.Now.ToString()} -> Thread [{threadNumber}] have {itemsNotInitialized} items not initalizaed...");
             }
             else
             {
-                Console.WriteLine($"{DateTime.Now.ToString()} -> Thread [{_threadNumber}] all initialised");
+                Console.WriteLine($"{DateTime.Now.ToString()} -> Thread [{threadNumber}] all initialised");
                 timer.Enabled = false;
             }
         }
@@ -86,7 +84,7 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <param name="tagName"></param>
         public void Advise(string tagName)
         {
-            var item = _dataStore.FirstOrDefault(a => a.Value.TagName == tagName && a.Value.CurrentThread == _threadNumber);
+            var item = _dataStore.FirstOrDefault(a => a.Value.TagName == tagName && a.Value.CurrentThread == threadNumber);
             if (!item.Value.OnAdvise)
             {
                 _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
@@ -101,7 +99,7 @@ namespace MXAccesRestAPI.MXDataHolder
         public void AdviseDevice(string device_name)
         {
 
-            var items = _dataStore.Where(a => a.Value.TagName.StartsWith(device_name) && a.Value.CurrentThread == _threadNumber).Select(a => a);
+            var items = _dataStore.Where(a => a.Value.TagName.StartsWith(device_name) && a.Value.CurrentThread == threadNumber).Select(a => a);
             foreach (var item in items)
             {
                 if (!item.Value.OnAdvise)
@@ -125,7 +123,7 @@ namespace MXAccesRestAPI.MXDataHolder
             }
             foreach (var item in _dataStore)
             {
-                if (item.Value.CurrentThread != _threadNumber)
+                if (item.Value.CurrentThread != threadNumber)
                 {
                     // obj instance of different thread
                     continue;
@@ -143,13 +141,13 @@ namespace MXAccesRestAPI.MXDataHolder
 
         private int GetLmxTagKey(int threadKey)
         {
-            return threadKey - _threadNumber * 100000;
+            return threadKey - threadNumber * 100000;
         }
 
 
         private int GetThreadFormattedKey(int lmxKey)
         {
-            return _threadNumber * 100000 + lmxKey;
+            return threadNumber * 100000 + lmxKey;
         }
 
         /// <summary>
@@ -158,7 +156,7 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <param name="item"></param>
         public void AddItem(MXAttribute item)
         {
-            item.CurrentThread ??= _threadNumber;
+            item.CurrentThread ??= threadNumber;
             if (LXMRegistered())
             {
                 try
@@ -169,7 +167,7 @@ namespace MXAccesRestAPI.MXDataHolder
                     bool succcess = _dataStore.TryAdd(key, item);
                     if (!succcess)
                     {
-                        Console.WriteLine($"[thread {_threadNumber}] > fail to add item [{key}] [{item.TagName}]");
+                        Console.WriteLine($"[thread {threadNumber}] > fail to add item [{key}] [{item.TagName}]");
                     }
                     else
                     {
@@ -199,7 +197,7 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 foreach (var item in items)
                 {
-                    item.CurrentThread ??= _threadNumber;
+                    item.CurrentThread ??= threadNumber;
                     if (item.TagName != null)
                     {
                         int key = GetThreadFormattedKey(_LmxServer.AddItem(_hLmxServerId, item.TagName));
@@ -225,7 +223,7 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <param name="value"></param>
         public void Unadvise(string value)
         {
-            var item = _dataStore.FirstOrDefault(a => a.Value.TagName == value && a.Value.CurrentThread == _threadNumber);
+            var item = _dataStore.FirstOrDefault(a => a.Value.TagName == value && a.Value.CurrentThread == threadNumber);
             if (item.Value != null && item.Value.OnAdvise)
             {
                 _LmxServer.UnAdvise(_hLmxServerId, GetLmxTagKey(item.Key));
@@ -240,7 +238,7 @@ namespace MXAccesRestAPI.MXDataHolder
         public void Unadvise(int index)
         {
 
-            if (_dataStore[index].OnAdvise && _dataStore[index].CurrentThread == _threadNumber)
+            if (_dataStore[index].OnAdvise && _dataStore[index].CurrentThread == threadNumber)
             {
                 _LmxServer.UnAdvise(_hLmxServerId, index);
                 _dataStore[index].OnAdvise = false;
@@ -322,16 +320,15 @@ namespace MXAccesRestAPI.MXDataHolder
                 if ((_LmxServer != null) && (_hLmxServerId == 0))
                 {
 
-                    _hLmxServerId = _LmxServer.Register(_serverName + "_" + _threadNumber);
+                    _hLmxServerId = _LmxServer.Register(_serverName + "_" + threadNumber);
                     _LmxServer.OnDataChange += new _ILMXProxyServerEvents_OnDataChangeEventHandler(LMX_OnDataChange);
-                    //_dataStore = new ConcurrentDictionary<int, MXAttribute>();
-                    Console.WriteLine($"[Thr: {_threadNumber}] hLMX [{_hLmxServerId}] -> Registered");
+                    Console.WriteLine($"[Thr: {threadNumber}] hLMX [{_hLmxServerId}] -> Registered");
 
                 }
             }
             catch (System.Exception ex)
             {
-                Console.WriteLine($"Register: Exception occurred. [thread {_threadNumber}]");
+                Console.WriteLine($"Register: Exception occurred. [thread {threadNumber}]");
                 Console.WriteLine(ex.Message);
                 throw;
             }
@@ -343,13 +340,13 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 if (LXMRegistered())
                 {
-                    Console.WriteLine($"hLMX [{_hLmxServerId}] [thread {_threadNumber}] UserAuth [{_lmxVerifyUser}]");
+                    Console.WriteLine($"hLMX [{_hLmxServerId}] [thread {threadNumber}] UserAuth [{_lmxVerifyUser}]");
                     _userLmxId = _LmxServer.AuthenticateUser(_hLmxServerId, _lmxVerifyUser, "");
                 }
             }
             catch (System.Exception ex)
             {
-                Console.WriteLine($"RegisterUser: Exception occurred. [thread {_threadNumber}]");
+                Console.WriteLine($"RegisterUser: Exception occurred. [thread {threadNumber}]");
                 Console.WriteLine(ex.Message);
             }
         }
