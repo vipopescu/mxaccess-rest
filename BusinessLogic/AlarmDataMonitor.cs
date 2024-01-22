@@ -64,7 +64,7 @@ namespace MXAccesRestAPI.Monitoring
             switch (changeType)
             {
                 case DataStoreChangeType.ADDED:
-                    Console.WriteLine($"T[{_threadNumber}] NEW      [ {data.TagName} ]");
+                    //Console.WriteLine($"T[{_threadNumber}] NEW      [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.REMOVED:
                     Console.WriteLine($"T[{_threadNumber}] REMOVED  [ {data.TagName} ]");

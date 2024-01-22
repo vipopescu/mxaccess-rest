@@ -47,7 +47,7 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 return null;
             }
-            return value.Value as MXAttribute;
+            return value;
         }
 
         public MXAttribute? GetData(string tagName)
