@@ -40,7 +40,7 @@ namespace MXAccesRestAPI
             builder.Services.AddSingleton<IDataProviderService, MxDataProviderService>();
 
             // Register MXDataHolderServiceFactory with dependencies
-            builder.Services.AddSingleton<IMXDataHolderServiceFactory, MXDataHolderServiceFactory>();
+            builder.Services.AddSingleton<IMXDataHolderServiceFactory, MXDataProcessorServiceFactory>();
         
 
             builder.Services.AddHostedService<GRAccessReadingService>();

@@ -7,7 +7,7 @@ using MXAccesRestAPI.Settings;
 
 namespace MXAccesRestAPI.MXDataHolder
 {
-    public class MXDataHolderServiceFactory(IDataProviderService dataProviderService, IOptions<MxDataDataServiceSettings> settings, AttributeConfigSettings attributeConfig) : IMXDataHolderServiceFactory
+    public class MXDataProcessorServiceFactory(IDataProviderService dataProviderService, IOptions<MxDataDataServiceSettings> settings, AttributeConfigSettings attributeConfig) : IMXDataHolderServiceFactory
     {
 
         private readonly ConcurrentDictionary<int, MXDataProcessorService> _services = [];
