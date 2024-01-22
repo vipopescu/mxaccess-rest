@@ -400,7 +400,7 @@ namespace MXAccesRestAPI.MXDataHolder
             int threadTagKey = GetThreadFormattedKey(phItemHandle);
             MXAttribute? mxAttr = _dataStore[threadTagKey];
 
-
+            // Console.WriteLine($"LMX_OnDataChange [thread {threadNumber}] [{threadTagKey}] [{mxAttr?.TagName}]");
 
             if (mxAttr != null)
             {
@@ -420,7 +420,7 @@ namespace MXAccesRestAPI.MXDataHolder
                             string[] attr_list = (string[])pvItemValue;
 
                             RegisterAttributes(tag_name[0], attr_list);
-                            RemoveData(mxAttr.TagName);
+                            RemoveData(threadTagKey);
 
 
                             timer ??= new Timer(5000);

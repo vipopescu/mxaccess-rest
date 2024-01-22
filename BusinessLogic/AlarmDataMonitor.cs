@@ -25,7 +25,6 @@ namespace MXAccesRestAPI.Monitoring
 
             _threadNumber = threadNumber;
             _dataHolderService = dataHolderService;
-            StartMonitoring();
         }
 
         ~AlarmDataMonitor()
@@ -49,6 +48,7 @@ namespace MXAccesRestAPI.Monitoring
             // Subscribing to the OnDataStoreChanged event
             _dataHolderService.OnDataStoreChanged += DataHolderService_OnDataStoreChanged;
             isActive = true;
+            Console.WriteLine($"T[{_threadNumber}] StartMonitoring");
         }
 
         public void StopMonitoring()
@@ -67,12 +67,12 @@ namespace MXAccesRestAPI.Monitoring
                     Console.WriteLine($"T[{_threadNumber}] NEW      [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.REMOVED:
-                    Console.WriteLine($"T[{_threadNumber}]REMOVED  [ {data.TagName} ]");
+                    Console.WriteLine($"T[{_threadNumber}] REMOVED  [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.MODIFIED:
-                    Console.WriteLine($"T[{_threadNumber}]MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
+                    Console.WriteLine($"T[{_threadNumber}] MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
 
-
+                    return;
                     if (AlarmRegex().IsMatch(data.TagName))
                     {
                         PopulateAlarmList(data.TagName.Split('.')[0]);
