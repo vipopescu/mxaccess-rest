@@ -21,9 +21,9 @@ namespace MXAccesRestAPI.GRAccess
         private readonly IMXDataHolderServiceFactory _imxDataHolderFactory;
 
         private readonly int _numberOfThreads;
-    
 
-        public GRAccessReadingService(IOptions<MxDataDataServiceSettings> mxDataServiceSettings,IOptions<GalaxySettings> settings, IServiceScopeFactory scopeFactory, IMXDataHolderServiceFactory imxDataHolderFactory)
+
+        public GRAccessReadingService(IOptions<MxDataDataServiceSettings> mxDataServiceSettings, IOptions<GalaxySettings> settings, IServiceScopeFactory scopeFactory, IMXDataHolderServiceFactory imxDataHolderFactory)
         {
             _scopeFactory = scopeFactory;
             _mySettings = settings.Value;
@@ -95,14 +95,16 @@ namespace MXAccesRestAPI.GRAccess
                      }
 
                      mxDataHolderService.AdviseAll();
-                     
+
                      _imxDataHolderFactory.MonitorAlarmsOnThread(threadIndex);
                  }, TaskCreationOptions.LongRunning);
+
+                Thread.Sleep(2000);
             }
         }
-    
-    
-    
+
+
+
         /// <summary>
         /// Retrives GrAccess Galaxy
         /// </summary>

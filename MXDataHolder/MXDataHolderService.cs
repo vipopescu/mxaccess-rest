@@ -321,7 +321,7 @@ namespace MXAccesRestAPI.MXDataHolder
                 Console.WriteLine(ex.Message);
             }
         }
-        
+
 
         /// <summary>
         /// Checks if the service is registered with the LMX server
@@ -333,8 +333,9 @@ namespace MXAccesRestAPI.MXDataHolder
         }
 
 
-        private void RegisterOnDataWrite(){
-            _dataProvider.OnDataWrite +=  WriteData;
+        private void RegisterOnDataWrite()
+        {
+            _dataProvider.OnDataWrite += WriteData;
         }
 
 

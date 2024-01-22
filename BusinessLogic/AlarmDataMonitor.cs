@@ -67,10 +67,10 @@ namespace MXAccesRestAPI.Monitoring
                     //Console.WriteLine($"T[{_threadNumber}] NEW      [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.REMOVED:
-                    Console.WriteLine($"T[{_threadNumber}] REMOVED  [ {data.TagName} ]");
+                    //Console.WriteLine($"T[{_threadNumber}] REMOVED  [ {data.TagName} ]");
                     break;
                 case DataStoreChangeType.MODIFIED:
-                    Console.WriteLine($"T[{_threadNumber}] MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
+                    //Console.WriteLine($"T[{_threadNumber}] MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
 
                     return;
                     if (AlarmRegex().IsMatch(data.TagName))
