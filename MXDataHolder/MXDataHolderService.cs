@@ -42,6 +42,7 @@ namespace MXAccesRestAPI.MXDataHolder
             _lmxVerifyUser = lmxVerifyUser;
             _userLmxId = 0;
             Register();
+            RegisterOnDataWrite();
             // RegisterUser(); // TODO: disabled for now, but will need when writing values
         }
         ~MXDataHolderService()
@@ -314,6 +315,7 @@ namespace MXAccesRestAPI.MXDataHolder
             }
         }
 
+
         public void RegisterUser()
         {
             try
@@ -330,6 +332,7 @@ namespace MXAccesRestAPI.MXDataHolder
                 Console.WriteLine(ex.Message);
             }
         }
+        
 
         /// <summary>
         /// Checks if the service is registered with the LMX server
@@ -339,6 +342,12 @@ namespace MXAccesRestAPI.MXDataHolder
         {
             return (_LmxServer != null) && (_hLmxServerId != 0);
         }
+
+
+        private void RegisterOnDataWrite(){
+            _dataProvider.OnDataWrite +=  WriteData;
+        }
+
 
 
         /// <summary>

@@ -13,6 +13,8 @@ namespace MXAccesRestAPI.MXDataHolder
 
         private readonly ConcurrentDictionary<int, MXAttribute> _mxDataStore = [];
 
+        public event IDataProviderService.OnDataWriteChangeEventHandler? OnDataWrite;
+
         public bool AddItem(MXAttribute item)
         {
             return _mxDataStore.TryAdd(item.Key, item);
@@ -48,9 +50,9 @@ namespace MXAccesRestAPI.MXDataHolder
             return value.Value as MXAttribute;
         }
 
-        public MXAttribute? GetData(string fullattrName)
+        public MXAttribute? GetData(string tagName)
         {
-            var item = _mxDataStore.FirstOrDefault(a => a.Value.TagName == fullattrName);
+            var item = _mxDataStore.FirstOrDefault(a => a.Value.TagName == tagName);
             if (item.Value == null)
             {
                 return null;
@@ -78,6 +80,12 @@ namespace MXAccesRestAPI.MXDataHolder
         public bool RemoveData(int id)
         {
             return _mxDataStore.TryRemove(id, out var valueRemoved);
+        }
+
+        public void WriteData(string tagName, object value, DateTime? timeStamp)
+        {
+            // notify about the write, but don't update value (let LMX do that)
+            OnDataWrite?.Invoke(tagName, value, timeStamp);
         }
     }
 }

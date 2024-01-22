@@ -7,9 +7,9 @@ namespace MXAccesRestAPI.Controllers
 {
     [ApiController]
     [Route("mxdata")]
-    public class MXDataController(IMXDataHolderService dataHolderService) : ControllerBase
+    public class MXDataController(IDataProviderService dataProviderService) : ControllerBase
     {
-        private readonly IMXDataHolderService _dataHolderService = dataHolderService;
+        private readonly IDataProviderService _dataHolderService = dataProviderService;
 
 
         [HttpGet("instances/{instanceName}/tags")]
