@@ -59,38 +59,58 @@ namespace MXAccesRestAPI.Monitoring
 
         private void DataHolderService_OnDataStoreChanged(int key, MXAttribute data, DataStoreChangeType changeType)
         {
+            Console.WriteLine($"DataHolderService_OnDataStoreChanged A [{Thread.CurrentThread.ManagedThreadId}]  [{data.CurrentThread}]");
+            
 
-            // Additional logic based on the type of change
-            switch (changeType)
-            {
-                case DataStoreChangeType.ADDED:
-                    //Console.WriteLine($"T[{_threadNumber}] NEW      [ {data.TagName} ]");
-                    break;
-                case DataStoreChangeType.REMOVED:
-                    //Console.WriteLine($"T[{_threadNumber}] REMOVED  [ {data.TagName} ]");
-                    break;
-                case DataStoreChangeType.MODIFIED:
-                    //Console.WriteLine($"T[{_threadNumber}] MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
+                // Additional logic based on the type of change
+                switch (changeType)
+                {
+                    case DataStoreChangeType.ADDED:
+                        //Console.WriteLine($"T[{_threadNumber}] NEW      [ {data.TagName} ]");
+                        break;
+                    case DataStoreChangeType.REMOVED:
+                        //Console.WriteLine($"T[{_threadNumber}] REMOVED  [ {data.TagName} ]");
+                        break;
+                    case DataStoreChangeType.MODIFIED:
+                        //Console.WriteLine($"T[{_threadNumber}] MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
 
-                    //if (!data.TagName.Contains("TUG_SBT_T_ITS_VSLS_S4_L")) {
-                    //    return;
-                    //}
-                   
-                    if (AlarmRegex().IsMatch(data.TagName))
-                    {
-                        //bool inAlarmVal = bool.Parse(data.Value.ToString() ?? "False");
-                        //PopulateAlarmList(data.TagName.Split('.')[0]);
+                        //if (!data.TagName.Contains("TUG_SBT_T_ITS_VSLS_S4_L")) {
+                        //    return;
+                        //}
+                           
 
-                    }
+                         // DEBUG: disabled for now
+                        return;
+                        try
+                        {
+                            if (AlarmRegex().IsMatch(data.TagName))
+                            {
+                                bool inAlarmVal = bool.Parse(data.Value.ToString() ?? "False");
+                                if (inAlarmVal)
+                                {
+                                    PopulateAlarmList(data.TagName.Split('.')[0]);
+                                }
 
 
-                    else if (data.TagName.EndsWith($".{AlarmMonitorConfig.FP_ALARM_EVENT}") ||
-                    data.TagName.EndsWith($".{AlarmMonitorConfig.FP_FAULT_EVENT}"))
-                    {
-                        //PopulateAlarmListFaceplate(data);
-                    }
-                    break;
-            }
+                            }
+
+
+                            else if (data.TagName.EndsWith($".{AlarmMonitorConfig.FP_ALARM_EVENT}") ||
+                            data.TagName.EndsWith($".{AlarmMonitorConfig.FP_FAULT_EVENT}"))
+                            {
+                                PopulateAlarmListFaceplate(data);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // tag is probably not found
+                        }
+
+
+                        break;
+                }
+            
+            
         }
 
 
@@ -134,11 +154,15 @@ namespace MXAccesRestAPI.Monitoring
             // Extract only the descriptions (second part of the tuple) from tmpAlarmList
             List<string> descriptions = tmpAlarmList.Select(alarm => alarm.Item2).ToList();
 
-            string alarmListArrRef = $"{instanceTag}.{AlarmMonitorConfig.FACEPLATE_ALARM_LIST_ARRAY}";
+            //string alarmListArrRef = $"{instanceTag}.{AlarmMonitorConfig.FACEPLATE_ALARM_LIST_ARRAY}";
+
+            // TODO: debugging
+            string alarmListArrRef = $"{instanceTag}.AlarmListFaceplate";
+            
             _dataHolderService.WriteData(alarmListArrRef, descriptions, DateTime.Now);
             if (descriptions.Count > 0)
             {
-                Console.WriteLine($"T[{_threadNumber}] AlarmList [ {alarmListArrRef} ] VAL -> {string.Join(',', descriptions)}");
+                Console.WriteLine($"T[{_threadNumber}] AlarmListFaceplate [ {alarmListArrRef} ] VAL -> {string.Join(',', descriptions)}");
             }
 
         }
@@ -209,7 +233,11 @@ namespace MXAccesRestAPI.Monitoring
 
             // Extract only the descriptions (second part of the tuple) from tmpAlarmList
             List<string> descriptions = tmpAlarmList.Select(alarm => alarm.Item2).ToList();
-            string alarmListArrRef = $"{instanceTag}.{AlarmMonitorConfig.FACEPLATE_ALARM_LIST_ARRAY}";
+            // string alarmListArrRef = $"{instanceTag}.{AlarmMonitorConfig.FACEPLATE_ALARM_LIST_ARRAY}";
+
+            // TODO: debugging
+            string alarmListArrRef = $"{instanceTag}.AlarmList";
+
             _dataHolderService.WriteData(alarmListArrRef, descriptions, DateTime.Now);
             if (descriptions.Count > 0)
             {

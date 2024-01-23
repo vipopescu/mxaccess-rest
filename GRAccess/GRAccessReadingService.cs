@@ -83,6 +83,7 @@ namespace MXAccesRestAPI.GRAccess
 
                 // TPL (Task Parallel Library)
                 // These longrunning threads will be continously running in background
+
                 Task.Factory.StartNew(() =>
                  {
                      int threadIndex = locali + 1; // Fix for closure issue
@@ -117,12 +118,12 @@ namespace MXAccesRestAPI.GRAccess
 
                      }
 
+
                  }, TaskCreationOptions.LongRunning);
 
-                //Thread.Sleep(2000);
             }
-
             _imxDataHolderFactory.RegisterOnInitializationComplete();
+       
         }
 
 

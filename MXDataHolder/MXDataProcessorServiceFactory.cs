@@ -44,7 +44,7 @@ namespace MXAccesRestAPI.MXDataHolder
         private void OnTimedEvent(System.Object source, ElapsedEventArgs e)
         {
             List<string> items = _dataProvider.GetAllTags();
-        
+
             if (items.Count == 0)
             {
                 return;
@@ -57,13 +57,13 @@ namespace MXAccesRestAPI.MXDataHolder
                 _lastTagCount = items.Count;
                 _counter = 0;
             }
-           
-              else if (_counter == 5)
+
+            else if (_counter == 5)
             {
                 _timer.Enabled = false;
                 Console.WriteLine($"{DateTime.Now} -> Initialised {items.Count} DONE");
                 DistributeTagsAcrossThreads();
-                
+
             }
             else
             {
@@ -78,35 +78,33 @@ namespace MXAccesRestAPI.MXDataHolder
 
             int numberOfThreads = _services.Keys.Count;
             string[] tags = [.. _dataProvider.GetAllTags()];
-            if(tags.Length == 0) {
+            if (tags.Length == 0)
+            {
                 return;
             }
             int segmentSize = tags.Length / numberOfThreads;
             int counterI = 0;
 
-            
-            foreach(MXDataProcessorService serviceVal in _services.Values)
+
+            foreach (MXDataProcessorService serviceVal in _services.Values)
             {
                 int segmentStart = counterI * segmentSize;
                 int segmentEnd = (counterI == numberOfThreads - 1) ? tags.Length : segmentStart + segmentSize;
                 ArraySegment<string> segment = new(tags, segmentStart, segmentEnd - segmentStart);
-
+                Console.WriteLine($"{DateTime.Now} -> Service {serviceVal.threadNumber} adding tags");
                 foreach (string tag in segment)
                 {
                     serviceVal.AddItem(tag);
                 }
-                serviceVal.TriggerOnAllInit(); 
-                Console.WriteLine($"{DateTime.Now} -> Service {serviceVal.threadNumber} tags [{segment.Count}]");
-                //serviceVal.AdviseAll();
-                AdviseAllForService(serviceVal);
-                counterI++;
-            }
-        }
 
-        private Task AdviseAllForService(MXDataProcessorService serviceVal)
-        {
-            serviceVal.AdviseAll();
-            return Task.CompletedTask;
+                Console.WriteLine($"{DateTime.Now} -> Service {serviceVal.threadNumber} tags [{segment.Count}]");
+                //AdviseAllForService(serviceVal);
+                serviceVal.AdviseAll();
+                counterI++;
+                Console.WriteLine($"{DateTime.Now} -> Service {serviceVal.threadNumber} triggerring all init");
+                serviceVal.TriggerOnAllInit();
+
+            }
         }
 
 
