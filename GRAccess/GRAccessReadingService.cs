@@ -73,53 +73,34 @@ namespace MXAccesRestAPI.GRAccess
 
             for (int i = 0; i < numberOfThreads; i++)
             {
-                // init MxDataHolderService per thread
-                int locali = i;
 
                 // add segment of tags to mxdataholder (AddItem)
                 int segmentStart = i * segmentSize;
                 int segmentEnd = (i == numberOfThreads - 1) ? tag_names.Length : segmentStart + segmentSize;
                 ArraySegment<string> segment = new(tag_names, segmentStart, segmentEnd - segmentStart);
 
-                // TPL (Task Parallel Library)
-                // These longrunning threads will be continously running in background
+                int threadIndex = i + 1;
+                MXDataProcessorService mxDataHolderService;
+                try
+                {
+                    mxDataHolderService = _imxDataHolderFactory.Create(threadIndex);
 
-                Task.Factory.StartNew(() =>
-                 {
-                     int threadIndex = locali + 1; // Fix for closure issue
-                     MXDataProcessorService mxDataHolderService;
-                     try
-                     {
-                         mxDataHolderService = _imxDataHolderFactory.Create(threadIndex);
+                    foreach (string tag_name in segment)
+                    {
+                        string fullRefName = tag_name + "._Attributes";
+                        mxDataHolderService.AddItem(fullRefName);
+                    }
 
+                    mxDataHolderService.AdviseAll();
 
-                         foreach (string tag_name in segment)
-                         {
-                             string fullRefName = tag_name + "._Attributes";
-                             mxDataHolderService.AddItem(fullRefName);
-                         }
+                    _imxDataHolderFactory.MonitorAlarmsOnThread(threadIndex);
+                }
+                catch (Exception)
+                {
 
-                         mxDataHolderService.AdviseAll();
-
-                         _imxDataHolderFactory.MonitorAlarmsOnThread(threadIndex);
-                     }
-                     catch (Exception e)
-                     {
-
-                         Console.WriteLine($"[Thrd: {threadIndex}] Couldn't be created so it's not being used");
-
-                         //if (!e.Message.Contains("E_ACCESSDENIED"))
-                         //{
-                         //    throw;
-                         //}
-                         //Console.WriteLine($"Creating Service Attemp #2 [Thrd: {threadIndex}]");
-                         //// Attemp 2
-                         //mxDataHolderService = _imxDataHolderFactory.Create(threadIndex);
-
-                     }
-
-
-                 }, TaskCreationOptions.LongRunning);
+                    Console.WriteLine($"[Thrd: {threadIndex}] Failed to create, retrying ...");
+                    i--;
+                }
             }
             _imxDataHolderFactory.RegisterOnInitializationComplete();
         }

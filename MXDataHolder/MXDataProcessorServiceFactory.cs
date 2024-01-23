@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Timers;
+using Azure;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MXAccesRestAPI.Classes;
@@ -92,10 +93,9 @@ namespace MXAccesRestAPI.MXDataHolder
                 int segmentEnd = (counterI == numberOfThreads - 1) ? tags.Length : segmentStart + segmentSize;
                 ArraySegment<string> segment = new(tags, segmentStart, segmentEnd - segmentStart);
                 Console.WriteLine($"{DateTime.Now} -> Service {serviceVal.threadNumber} adding tags");
-                foreach (string tag in segment)
-                {
-                    serviceVal.AddItem(tag);
-                }
+
+                // run in parallel
+                Parallel.ForEach(segment, serviceVal.AddItem);
 
                 Console.WriteLine($"{DateTime.Now} -> Service {serviceVal.threadNumber} tags [{segment.Count}]");
                 //AdviseAllForService(serviceVal);
@@ -105,6 +105,12 @@ namespace MXAccesRestAPI.MXDataHolder
                 serviceVal.TriggerOnAllInit();
 
             }
+
+
+
+
+
+           
         }
 
 

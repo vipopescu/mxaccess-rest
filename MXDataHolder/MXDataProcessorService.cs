@@ -67,13 +67,14 @@ namespace MXAccesRestAPI.MXDataHolder
 
         private void OnTimedEvent(Object source, ElapsedEventArgs e)
         {
+
             List<MXAttribute> items = _dataProvider.GetAllData();
             var itemsNotInit = items.Where(a => a.CurrentThread == threadNumber && !a.initialized).Select(a => a);
             var itemsNotInitializedCount = itemsNotInit.Count();
             _tagCounter = itemsNotInitializedCount == 0 ? -1 : itemsNotInitializedCount;
             if (itemsNotInitializedCount != 0)
             {
-               Console.WriteLine($"{DateTime.Now} -> Thread [{threadNumber}] [{_hLmxServerId}] have {itemsNotInitializedCount} items not initalizaed...");
+                Console.WriteLine($"{DateTime.Now} -> Thread [{threadNumber}] [{_hLmxServerId}] have {itemsNotInitializedCount} items not initalizaed...");
                 foreach (var item in itemsNotInit)
                 {
                     item.InitalizedChecks++;
@@ -120,7 +121,7 @@ namespace MXAccesRestAPI.MXDataHolder
 
         public void Advise(int key)
         {
-            MXAttribute item = _dataProvider.GetData(key);
+            MXAttribute? item = _dataProvider.GetData(key);
             Advise(item);
         }
 
@@ -170,20 +171,18 @@ namespace MXAccesRestAPI.MXDataHolder
 
             Console.WriteLine($"[T{threadNumber}] Advising  [{mxTags.Count()}] ...");
 
-            
-
-            Parallel.ForEach(mxTags, (item) =>
-            {
-                _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
-                item.OnAdvise = true;
-            });
-
-
-            //foreach (MXAttribute item in mxTags)
+            //Parallel.ForEach(mxTags, (item) =>
             //{
             //    _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
             //    item.OnAdvise = true;
-            //}
+            //});
+
+
+            foreach (MXAttribute item in mxTags)
+            {
+                _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
+                item.OnAdvise = true;
+            }
 
             Console.WriteLine($"[T{threadNumber}] Advised All devices");
 
@@ -203,12 +202,12 @@ namespace MXAccesRestAPI.MXDataHolder
         public void ReAdvise(int id)
         {
             MXAttribute? tag = _dataProvider.GetData(id);
-            
+
             if (tag == null) return; // Cry?
 
             if (tag.InitalizedChecks > 10)
             {
-                Console.WriteLine("READVISING " + tag.TagName);
+                Console.WriteLine($"READVISING [T {threadNumber}]  [{tag.TagName}]");
 
                 Unadvise(id);
                 Advise(id);
@@ -229,7 +228,7 @@ namespace MXAccesRestAPI.MXDataHolder
                     int itemId = _LmxServer.AddItem(_hLmxServerId, tagname);
                     int key = GetThreadFormattedKey(itemId);
 
-                    MXAttribute item = new() { TagName = tagname, Key = key, CurrentThread = threadNumber };
+                    MXAttribute item = new() { TagName = tagname, LmxKey = itemId, Key = key, CurrentThread = threadNumber, };
 
                     bool succcess = _dataProvider.AddItem(item);
                     if (!succcess)
@@ -300,7 +299,7 @@ namespace MXAccesRestAPI.MXDataHolder
         public bool RemoveData(string tagName)
         {
             MXAttribute? tag = _dataProvider.GetData(tagName);
-            return  RemoveData(tag);
+            return tag == null || RemoveData(tag);
         }
 
         /// <summary>
@@ -315,7 +314,7 @@ namespace MXAccesRestAPI.MXDataHolder
         public bool RemoveData(int id)
         {
             MXAttribute? tag = _dataProvider.GetData(id);
-            return RemoveData(tag);
+            return tag == null || RemoveData(tag);
         }
 
         public bool RemoveData(MXAttribute tag)
@@ -403,29 +402,33 @@ namespace MXAccesRestAPI.MXDataHolder
         private void RegisterAttributes(string tag_name, string[] all_attributes)
         {
             if (string.IsNullOrEmpty(tag_name)) return;
-            if (all_attributes.Count() == 0) return;
+            if (all_attributes.Length == 0) return;
 
             foreach (string attribute in all_attributes)
             {
                 _dataProvider.AddTag(tag_name + "." + attribute);
-                // AddItem(full_tag_name);
             }
-            // AdviseDevice(tag_name);
         }
 
+
+        /// <summary>
+        /// Get Attributes that can be registered
+        /// </summary>
+        /// <param name="attributes_list_all"></param>
+        /// <returns></returns>
         private string[] ParseAttributesMap(string[] attributes_list_all)
         {
             string[] result = [];
 
-            var attributes = attributes_list_all
-                  .Where(attribute => (_allowedAttributes.Where(allowedAttr => attribute.EndsWith(allowedAttr)).ToArray().Length > 0))
+            var extendedAttributes = attributes_list_all
+                  .Where(attribute => _allowedAttributes.Where(allowedAttr => attribute.EndsWith(allowedAttr)).Any())
                   .ToArray();
 
             var attr_list_uda = attributes_list_all.Where(attr => attr.EndsWith(".Description"))
                         .Select(attr => attr.Replace(".Description", ""))
                         .ToArray();
 
-            return attr_list_uda.Concat(attributes).ToArray();
+            return [.. attr_list_uda, .. extendedAttributes];
         }
 
         /// <summary>
@@ -439,68 +442,76 @@ namespace MXAccesRestAPI.MXDataHolder
         /// <param name="ItemStatus"></param>
         private void LMX_OnDataChange(int hLMXServerHandle, int phItemHandle, object pvItemValue, int pwItemQuality, object pftItemTimeStamp, ref ArchestrA.MxAccess.MXSTATUS_PROXY[] ItemStatus)
         {
-            var itemStatus = ItemStatus;
 
-            int threadTagKey = GetThreadFormattedKey(phItemHandle);
+            var mxStatus = ItemStatus;
 
-            MXAttribute? mxAttr = _dataProvider.GetData(threadTagKey);
-
-            //Console.WriteLine($"LMX_OnDataChange [thread {threadNumber}] [{threadTagKey}] [{mxAttr?.TagName}] [{Thread.CurrentThread.ManagedThreadId}] [{Thread.CurrentThread.Name}]");
-
-            if (mxAttr != null)
+            // Run this on different thread
+            Task.Run(() =>
             {
-                if (itemStatus[0].success != 0)
+
+                var itemStatus = mxStatus;  // fixed for closure
+
+                int threadTagKey = GetThreadFormattedKey(phItemHandle);
+
+                MXAttribute? mxAttr = _dataProvider.GetData(threadTagKey);
+
+                // Console.WriteLine($"LMX_OnDataChange [thread {threadNumber}] [{threadTagKey}] [{mxAttr?.TagName}] [{Thread.CurrentThread.ManagedThreadId}] [{Thread.CurrentThread.Name}]");
+
+                if (mxAttr != null)
                 {
-                    try
+                    if (itemStatus[0].success != 0)
                     {
-
-                        // Tag's available attributes
-                        if (mxAttr.TagName.EndsWith("._Attributes"))
+                        try
                         {
-                            mxAttr.initialized = true;
 
-                            //Console.WriteLine($"LMX_OnDataChange [thread {_threadNumber}] [{threadTagKey}] [{_dataStore[threadTagKey].TagName}]");
-
-                            string[] tag_name = mxAttr.TagName.Split('.');
-                            string[] attr_list = ParseAttributesMap((string[])pvItemValue);
-
-                            RegisterAttributes(tag_name[0], attr_list);
-                            RemoveData(threadTagKey);
-                        }
-                        else
-                        {
-                            mxAttr.Quality = pwItemQuality;
-                            mxAttr.initialized = true;
-                            mxAttr.InitalizedChecks = 0;
-
-                            DateTime dateValue;
-                            if (DateTime.TryParse(pftItemTimeStamp.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out dateValue))
+                            // Tag's available attributes
+                            if (mxAttr.TagName.EndsWith("._Attributes"))
                             {
-                                mxAttr.TimeStamp = dateValue;
+                                mxAttr.initialized = true;
+
+                                //Console.WriteLine($"LMX_OnDataChange [thread {_threadNumber}] [{threadTagKey}] [{_dataStore[threadTagKey].TagName}]");
+
+                                string[] tag_name = mxAttr.TagName.Split('.');
+                                string[] attr_list = ParseAttributesMap((string[])pvItemValue);
+
+                                RegisterAttributes(tag_name[0], attr_list);
+                                RemoveData(threadTagKey);
                             }
-                            mxAttr.Value = pvItemValue;
+                            else
+                            {
+                                mxAttr.Quality = pwItemQuality;
+                                mxAttr.initialized = true;
+                                mxAttr.InitalizedChecks = 0;
+
+                                DateTime dateValue;
+                                if (DateTime.TryParse(pftItemTimeStamp.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out dateValue))
+                                {
+                                    mxAttr.TimeStamp = dateValue;
+                                }
+                                mxAttr.Value = pvItemValue;
 
 
-                            //Console.WriteLine($"LMX_OnDataChange [thread {_threadNumber}] [{threadTagKey}] [{_dataStore[threadTagKey].TagName}]");
-                            NotifyDataStoreChange(threadTagKey, mxAttr, DataStoreChangeType.MODIFIED);
+                                //Console.WriteLine($"LMX_OnDataChange [thread {_threadNumber}] [{threadTagKey}] [{_dataStore[threadTagKey].TagName}]");
+                                NotifyDataStoreChange(threadTagKey, mxAttr, DataStoreChangeType.MODIFIED);
 
 
+                            }
+                        }
+                        catch (System.Exception ex)
+                        {
+                            Console.WriteLine("Something wrong parsing " + ex.Message);
                         }
                     }
-                    catch (System.Exception ex)
+                    else
                     {
-                        Console.WriteLine("Something wrong parsing " + ex.Message);
+                        //Console.WriteLine("SMALL CRY....");
                     }
-                } 
+                }
                 else
                 {
-                    Console.WriteLine("SMALL CRY....");
+                    Console.WriteLine("BIG CRY....");
                 }
-            }
-            else
-            {
-                Console.WriteLine("BIG CRY....");
-            }
+            });
         }
 
 

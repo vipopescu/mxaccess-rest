@@ -4,6 +4,7 @@ namespace MXAccesRestAPI.Classes
     {
 
         public required int Key { get; set; }
+        public required int LmxKey { get; set; }
         public required string TagName { get; set; }
         public DateTime TimeStamp { get; set; }
         public object? Value { get; set; }
