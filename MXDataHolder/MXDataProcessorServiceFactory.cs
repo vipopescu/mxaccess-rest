@@ -94,23 +94,17 @@ namespace MXAccesRestAPI.MXDataHolder
                 ArraySegment<string> segment = new(tags, segmentStart, segmentEnd - segmentStart);
                 Console.WriteLine($"{DateTime.Now} -> Service {serviceVal.threadNumber} adding tags");
 
-                // run in parallel
+                // add items asynchronously
                 Parallel.ForEach(segment, serviceVal.AddItem);
 
                 Console.WriteLine($"{DateTime.Now} -> Service {serviceVal.threadNumber} tags [{segment.Count}]");
-                //AdviseAllForService(serviceVal);
                 serviceVal.AdviseAll();
                 counterI++;
-                Console.WriteLine($"{DateTime.Now} -> Service {serviceVal.threadNumber} triggerring all init");
+                Console.WriteLine($"{DateTime.Now} -> Service {serviceVal.threadNumber} confirming tag initialized");
                 serviceVal.TriggerOnAllInit();
 
             }
 
-
-
-
-
-           
         }
 
 
