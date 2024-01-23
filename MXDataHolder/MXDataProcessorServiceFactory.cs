@@ -1,10 +1,11 @@
 using System.Collections.Concurrent;
-using System.Diagnostics.Metrics;
 using System.Timers;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using MXAccesRestAPI.Classes;
 using MXAccesRestAPI.Monitoring;
 using MXAccesRestAPI.Settings;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MXAccesRestAPI.MXDataHolder
 {
@@ -40,11 +41,11 @@ namespace MXAccesRestAPI.MXDataHolder
             }
         }
 
-        private void OnTimedEvent(Object source, ElapsedEventArgs e)
+        private void OnTimedEvent(System.Object source, ElapsedEventArgs e)
         {
             List<string> items = _dataProvider.GetAllTags();
-
-            if(items.Count == 0)
+        
+            if (items.Count == 0)
             {
                 return;
             }
@@ -57,7 +58,7 @@ namespace MXAccesRestAPI.MXDataHolder
                 _counter = 0;
             }
            
-              else if (_counter == 3)
+              else if (_counter == 5)
             {
                 _timer.Enabled = false;
                 Console.WriteLine($"{DateTime.Now} -> Initialised {items.Count} DONE");
@@ -98,6 +99,7 @@ namespace MXAccesRestAPI.MXDataHolder
                 Console.WriteLine($"{DateTime.Now} -> Service {serviceVal.threadNumber} tags [{segment.Count}]");
                 //serviceVal.AdviseAll();
                 AdviseAllForService(serviceVal);
+                counterI++;
             }
         }
 

@@ -72,17 +72,22 @@ namespace MXAccesRestAPI.Monitoring
                 case DataStoreChangeType.MODIFIED:
                     //Console.WriteLine($"T[{_threadNumber}] MODIFIED [ {data.TagName} ] VAL -> {data.Value}");
 
-                    return;
+                    //if (!data.TagName.Contains("TUG_SBT_T_ITS_VSLS_S4_L")) {
+                    //    return;
+                    //}
+                   
                     if (AlarmRegex().IsMatch(data.TagName))
                     {
-                        PopulateAlarmList(data.TagName.Split('.')[0]);
+                        //bool inAlarmVal = bool.Parse(data.Value.ToString() ?? "False");
+                        //PopulateAlarmList(data.TagName.Split('.')[0]);
+
                     }
 
 
                     else if (data.TagName.EndsWith($".{AlarmMonitorConfig.FP_ALARM_EVENT}") ||
                     data.TagName.EndsWith($".{AlarmMonitorConfig.FP_FAULT_EVENT}"))
                     {
-                        PopulateAlarmListFaceplate(data);
+                        //PopulateAlarmListFaceplate(data);
                     }
                     break;
             }

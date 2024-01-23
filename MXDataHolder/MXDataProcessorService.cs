@@ -369,7 +369,6 @@ namespace MXAccesRestAPI.MXDataHolder
               .Where(attribute => (!attribute.Contains('.') || _allowedAttributes.Where(allowedAttr => attribute.Contains(allowedAttr)).ToArray().Length > 0) && !attribute.StartsWith('_'))
               .ToArray();
 
-
             foreach (string attribute in attributes)
             {
 
@@ -432,7 +431,6 @@ namespace MXAccesRestAPI.MXDataHolder
                             mxAttr.Value = pvItemValue;
 
                             //Console.WriteLine($"LMX_OnDataChange [thread {_threadNumber}] [{threadTagKey}] [{_dataStore[threadTagKey].TagName}]");
-
                             NotifyDataStoreChange(threadTagKey, mxAttr, DataStoreChangeType.MODIFIED);
 
                         }
@@ -462,7 +460,7 @@ namespace MXAccesRestAPI.MXDataHolder
             MXAttribute? item = _dataProvider.GetData(tagName);
             if (item?.Value == null)
             {
-                throw new Exception("Item was not found");
+                throw new Exception($"[{tagName}] Item was not found");
             }
             if (item.OnAdvise)
             {

@@ -12,6 +12,28 @@ namespace MXAccesRestAPI.Controllers
         private readonly IDataProviderService _dataHolderService = dataProviderService;
 
 
+
+
+        [HttpGet("instances/tags")]
+        public IActionResult GetTags()
+        {
+            var data = _dataHolderService.GetAllTags();
+            if (data == null)
+                return NotFound("Data not found.");
+            return Ok(data);
+        }
+
+        [HttpGet("instances/tags/uninitialised")]
+        public IActionResult GetUninitialisedTags()
+        {
+            var data = _dataHolderService.GetAllData().Where( tag => !tag.initialized)
+                                   .Select(x => x.AsDto());
+            if (data == null)
+                return NotFound("Data not found.");
+            return Ok(data);
+        }
+
+
         [HttpGet("instances/{instanceName}/tags")]
         public IActionResult GetInstanceData(string instanceName)
         {
