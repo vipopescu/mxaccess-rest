@@ -120,13 +120,9 @@ namespace MXAccesRestAPI.GRAccess
 
 
                  }, TaskCreationOptions.LongRunning);
-
             }
             _imxDataHolderFactory.RegisterOnInitializationComplete();
-       
         }
-
-
 
         /// <summary>
         /// Retrives GrAccess Galaxy

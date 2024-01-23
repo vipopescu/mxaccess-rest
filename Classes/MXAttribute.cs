@@ -9,9 +9,9 @@ namespace MXAccesRestAPI.Classes
         public object? Value { get; set; }
         public int Quality { get; set; }
         public bool OnAdvise { get; set; }
-
         public bool initialized = false;
-        public int? CurrentThread  { get; set; }
+        public int? CurrentThread { get; set; }
+        public int InitalizedChecks { get; set; } = 0;
     }
 
 
