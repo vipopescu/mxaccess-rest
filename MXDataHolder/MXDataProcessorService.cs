@@ -144,7 +144,7 @@ namespace MXAccesRestAPI.MXDataHolder
             List<MXAttribute> mxTagsALl = _dataProvider.GetAllData();
             // exclude other thread objects
             List<MXAttribute> mxTags = mxTagsALl.Where(a => a.CurrentThread == threadNumber && !a.OnAdvise).Select(a => a).ToList();
-            Console.WriteLine($"[T{threadNumber}] Advising [{mxTags.Count}] ...");
+            Console.WriteLine($"[T{threadNumber}] Advising  [{mxTags.Count}] ...");
             foreach (MXAttribute item in mxTags)
             {
                 _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
@@ -396,7 +396,7 @@ namespace MXAccesRestAPI.MXDataHolder
         {
             var itemStatus = ItemStatus;
 
-            Task.Run(() => {
+
 
 
                 int threadTagKey = GetThreadFormattedKey(phItemHandle);
@@ -455,7 +455,6 @@ namespace MXAccesRestAPI.MXDataHolder
                     Console.WriteLine("BIG CRY....");
                 }
 
-            });
 
                 
            
