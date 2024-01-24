@@ -13,8 +13,13 @@ namespace MXAccesRestAPI.MXDataHolder
         // Event for data store changes
         event DataStoreChangeEventHandler OnDataStoreChanged;
 
-        void AddItem(MXAttribute item);
+
+        void TriggerOnAllInit();
+
+        void AddItem(string tagName);
         void Advise(string tagName);
+
+
         void AdviseAll();
         MXAttribute? GetData(int key);
         MXAttribute? GetData(string fullattrName);

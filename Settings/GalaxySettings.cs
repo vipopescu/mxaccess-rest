@@ -9,5 +9,6 @@ namespace MXAccesRestAPI.Settings
         public string GalaxyUserName { get; init; }
 
         public string GalaxyPassword { get; init; }
+        
     }
 }

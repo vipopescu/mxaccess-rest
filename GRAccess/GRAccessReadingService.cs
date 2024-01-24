@@ -1,12 +1,9 @@
-
 using System.Diagnostics;
-using System.Xml.Serialization;
 using ArchestrA.GRAccess;
 using Microsoft.Extensions.Options;
 using MXAccesRestAPI.Classes;
 using MXAccesRestAPI.MXDataHolder;
 using MXAccesRestAPI.Settings;
-using MXAccesRestAPI.XML;
 using MXAccess_RestAPI.DBContext;
 
 namespace MXAccesRestAPI.GRAccess
@@ -21,28 +18,28 @@ namespace MXAccesRestAPI.GRAccess
 
         private readonly IServiceScopeFactory _scopeFactory;
 
-        private IMXDataHolderService _mxDataHolder;
+        private readonly IMXDataHolderServiceFactory _imxDataHolderFactory;
 
-        private int attrCount;
+        private readonly int _numberOfThreads;
 
-        public GRAccessReadingService(IOptions<GalaxySettings> settings, IServiceScopeFactory scopeFactory, IMXDataHolderService mxDataHolder)
+
+        public GRAccessReadingService(IOptions<MxDataDataServiceSettings> mxDataServiceSettings, IOptions<GalaxySettings> settings, IServiceScopeFactory scopeFactory, IMXDataHolderServiceFactory imxDataHolderFactory)
         {
             _scopeFactory = scopeFactory;
             _mySettings = settings.Value;
+            _imxDataHolderFactory = imxDataHolderFactory;
             IsFetchComplete = false;
-            _mxDataHolder = mxDataHolder;
-            attrCount = 0;
+            _numberOfThreads = mxDataServiceSettings.Value.MxDataServiceThreads;
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            Stopwatch stopwatch = new Stopwatch();
+            Stopwatch stopwatch = new();
             stopwatch.Start();
-
 
             Console.WriteLine("Getting runtime objects...");
 
-            List<string> instancesTagNames = new List<string>();
+            List<string> instancesTagNames = [];
             using (var scope = _scopeFactory.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<GRDBContext>();
@@ -52,7 +49,7 @@ namespace MXAccesRestAPI.GRAccess
             // Register to _Attributed
             Console.WriteLine("Found " + instancesTagNames.Count + " variables to register...");
 
-            GetUDAInfo([.. instancesTagNames]);
+            RegisterMxTags([.. instancesTagNames]);
 
             Console.WriteLine("Finished loading data...");
 
@@ -62,6 +59,56 @@ namespace MXAccesRestAPI.GRAccess
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Registers UDAs and other related MX tags
+        /// </summary>
+        /// <param name="galaxy"></param>
+        /// <param name="tag_names"></param>
+        public void RegisterMxTags(string[] tag_names)
+        {
+
+            int numberOfThreads = _numberOfThreads;
+            if (numberOfThreads > tag_names.Length) numberOfThreads = 1;
+            int segmentSize = tag_names.Length / numberOfThreads;
+
+            for (int i = 0; i < numberOfThreads; i++)
+            {
+
+                // add segment of tags to mxdataholder (AddItem)
+                int segmentStart = i * segmentSize;
+                int segmentEnd = (i == numberOfThreads - 1) ? tag_names.Length : segmentStart + segmentSize;
+                ArraySegment<string> segment = new(tag_names, segmentStart, segmentEnd - segmentStart);
+
+                int threadIndex = i + 1;
+                MXDataProcessorService mxDataHolderService;
+                try
+                {
+                    mxDataHolderService = _imxDataHolderFactory.Create(threadIndex);
+
+                    foreach (string tag_name in segment)
+                    {
+                        string fullRefName = tag_name + "._Attributes";
+                        mxDataHolderService.AddItem(fullRefName);
+                    }
+
+                    mxDataHolderService.AdviseAll();
+
+                    _imxDataHolderFactory.MonitorAlarmsOnThread(threadIndex);
+                }
+                catch (Exception)
+                {
+
+                    Console.WriteLine($"[Thrd: {threadIndex}] Failed to create, retrying ...");
+                    i--;
+                }
+            }
+            _imxDataHolderFactory.RegisterOnInitializationComplete();
+        }
+
+        /// <summary>
+        /// Retrives GrAccess Galaxy
+        /// </summary>
+        /// <returns></returns>
         IGalaxy? RetrieveGalaxy()
         {
             // Query the Galaxies, check if we can reach the server and if the desired
@@ -88,23 +135,5 @@ namespace MXAccesRestAPI.GRAccess
             }
             return galaxy;
         }
-
-        /// <summary>
-        /// </summary>
-        /// <param name="galaxy"></param>
-        /// <param name="tag_names"></param>
-        public void GetUDAInfo(string[] tag_names)
-        {
-
-            foreach (string tag_name in tag_names)
-            {
-                string fullRefName = tag_name + "._Attributes";
-                _mxDataHolder.AddItem(new MXAttribute { TagName = fullRefName });
-                attrCount++;
-            }
-            _mxDataHolder.AdviseAll();
-        }
     }
 }
-
-

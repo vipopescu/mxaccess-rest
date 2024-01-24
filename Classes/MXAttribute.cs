@@ -2,11 +2,17 @@ namespace MXAccesRestAPI.Classes
 {
     public class MXAttribute
     {
+
+        public required int Key { get; set; }
+        public required int LmxKey { get; set; }
         public required string TagName { get; set; }
         public DateTime TimeStamp { get; set; }
         public object? Value { get; set; }
         public int Quality { get; set; }
         public bool OnAdvise { get; set; }
+        public bool initialized = false;
+        public int? CurrentThread { get; set; }
+        public int InitalizedChecks { get; set; } = 0;
     }
 
 

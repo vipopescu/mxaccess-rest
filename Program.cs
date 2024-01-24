@@ -8,6 +8,7 @@ using MXAccess_RestAPI.DBContext;
 using System.Text.Json;
 using MXAccesRestAPI.Classes;
 using MXAccesRestAPI.Monitoring;
+using System.Collections.Concurrent;
 
 namespace MXAccesRestAPI
 {
@@ -18,8 +19,10 @@ namespace MXAccesRestAPI
 
             var builder = WebApplication.CreateBuilder(args);
 
+            Console.WriteLine($"{DateTime.Now.ToString()} -> Starting the business...");
+
             // Settings & Config
-            string serverName = builder.Configuration.GetValue<string>("ServerName") ?? "";
+            builder.Services.Configure<MxDataDataServiceSettings>(builder.Configuration.GetSection("MxDataDataServiceSettings"));
             builder.Services.Configure<GalaxySettings>(builder.Configuration.GetSection("GalaxySettings"));
 
             // Attribute Tag configuration
@@ -33,18 +36,16 @@ namespace MXAccesRestAPI
             AttributeConfigSettings attributeConfig =
                 JsonSerializer.Deserialize<AttributeConfigSettings>(File.ReadAllText(Path.Combine(basePath, attributeConfPath))) ?? throw new InvalidOperationException($"Attribute Config error: {attributeConfPath}");
 
+            builder.Services.AddSingleton<AttributeConfigSettings>(attributeConfig);
+            builder.Services.AddSingleton<IDataProviderService, MxDataProviderService>();
 
-            // Adding services
-            var mxDataHolderService = new MXDataHolderService(serverName, attributeConfig.AllowedTagAttributes);
-            builder.Services.AddSingleton<IMXDataHolderService>(mxDataHolderService);
+            // Register MXDataHolderServiceFactory with dependencies
+            builder.Services.AddSingleton<IMXDataHolderServiceFactory, MXDataProcessorServiceFactory>();
+        
+
             builder.Services.AddHostedService<GRAccessReadingService>();
             builder.Services.AddDbContext<GRDBContext>(options =>
                            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-
-            // Register DataStoreMonitor as a Singleton and use the same instance of MXDataHolderService
-            builder.Services.AddSingleton<AlarmDataMonitor>(new AlarmDataMonitor(mxDataHolderService));
-
 
             builder.Services.AddControllers().AddJsonOptions(options =>
             {
