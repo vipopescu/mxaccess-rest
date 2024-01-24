@@ -92,16 +92,6 @@ namespace MXAccesRestAPI.MXDataHolder
                 Console.WriteLine($"{DateTime.Now} -> Thread [{threadNumber}] all initialised");
                 timer.Enabled = false;
             }
-
-            // DEBUG
-            //Console.WriteLine($"{DateTime.Now.ToString()} -> Thread [{_threadNumber}] have {itemsNotInitialized.Count()} items not initalizaed...");
-            //if (itemsNotInitialized.Count() > 0)
-            //{
-            //    foreach (var item in itemsNotInitialized)
-            //    {
-            //        Console.Write(item.Value.TagName + ", ");
-            //    }
-            //}
         }
 
 
@@ -171,20 +161,30 @@ namespace MXAccesRestAPI.MXDataHolder
 
             Console.WriteLine($"[T{threadNumber}] Advising  [{mxTags.Count()}] ...");
 
-            // when there are too many tags (30k + per LmxServer), this can crash with Outofmemory exception
-            //Parallel.ForEach(mxTags, (item) =>
-            //{
-            //    _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
-            //    item.OnAdvise = true;
-            //});
 
 
-            // safer but slower option
-            foreach (MXAttribute item in mxTags)
+            if (mxTags.Count() > 20000)
             {
-                _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
-                item.OnAdvise = true;
+
+                // safer but slower option
+                foreach (MXAttribute item in mxTags)
+                {
+                    _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
+                    item.OnAdvise = true;
+                }
             }
+            else
+            {
+                // when there are too many tags (30k + per LmxServer), this can crash with Outofmemory exception
+                Parallel.ForEach(mxTags, (item) =>
+                           {
+                               _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
+                               item.OnAdvise = true;
+                           });
+            }
+
+
+
 
             Console.WriteLine($"[T{threadNumber}] Advised All devices");
 
