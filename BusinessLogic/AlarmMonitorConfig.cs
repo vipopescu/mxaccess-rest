@@ -9,6 +9,8 @@ namespace MXAccesRestAPI.Monitoring
         public const string PLC_IO_ALARM_EVENT = "ALARM_EVENT_EV";
         public const string PLC_IO_FAULT_EVENT = "FAULT_EVENT_EV";
 
+        public const string INPUT_SOURCE = "InputSource";
+
         public const string ALARM_DESCRIPTION_ATTR = "Description";
         public const string ALARM_PRIORITY_ATTR = "Priority";
 
@@ -17,7 +19,10 @@ namespace MXAccesRestAPI.Monitoring
         public const string ALARM_EVENT = "Alarm";
         public const string ALARM_IN_ALARM_ATTR = "InAlarm";
 
-        
+        public const string ALARM_ACTIVE_ALARM_STATE = "ActiveAlarmState";
+
+
+
 
         // FAUL/EVENT Alarms
         public const string FP_ALARM_EVENT = "ALARM_EVENT_FP";
