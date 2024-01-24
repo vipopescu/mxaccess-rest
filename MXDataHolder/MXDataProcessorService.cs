@@ -161,29 +161,12 @@ namespace MXAccesRestAPI.MXDataHolder
 
             Console.WriteLine($"[T{threadNumber}] Advising  [{mxTags.Count()}] ...");
 
-
-
-            if (mxTags.Count() > 12000)
-            {
-
-                // safer but slower option
-                foreach (MXAttribute item in mxTags)
-                {
-                    _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
-                    item.OnAdvise = true;
-                }
-            }
-            else
-            {
-                // when there are too many tags (20k + per LmxServer), this can crash with Outofmemory exception
-                Parallel.ForEach(mxTags, (item) =>
-                           {
-                               _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
-                               item.OnAdvise = true;
-                           });
-            }
-
-
+            // TODO: 
+            Parallel.ForEach(mxTags, (item) =>
+                                {
+                                    _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
+                                    item.OnAdvise = true;
+                                });
 
 
             Console.WriteLine($"[T{threadNumber}] Advised All devices");

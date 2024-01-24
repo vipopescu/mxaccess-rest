@@ -104,6 +104,7 @@ namespace MXAccesRestAPI.MXDataHolder
 
         public void WriteData(string tagName, object value, DateTime? timeStamp)
         {
+
             // notify about the write, but don't update value (let LMX do that)
             OnDataWrite?.Invoke(tagName, value, timeStamp);
         }
