@@ -44,7 +44,7 @@ namespace MXAccesRestAPI.MXDataHolder
             _lmxVerifyUser = lmxVerifyUser;
             _userLmxId = 0;
             Register();
-            // RegisterUser(); // TODO: disabled for now, but will need when writing values
+            RegisterUser(); // TODO: disabled for now, but will need when writing values
             RegisterOnDataWrite();
         }
         ~MXDataProcessorService()
@@ -163,7 +163,7 @@ namespace MXAccesRestAPI.MXDataHolder
 
 
 
-            if (mxTags.Count() > 20000)
+            if (mxTags.Count() > 12000)
             {
 
                 // safer but slower option
@@ -175,7 +175,7 @@ namespace MXAccesRestAPI.MXDataHolder
             }
             else
             {
-                // when there are too many tags (30k + per LmxServer), this can crash with Outofmemory exception
+                // when there are too many tags (20k + per LmxServer), this can crash with Outofmemory exception
                 Parallel.ForEach(mxTags, (item) =>
                            {
                                _LmxServer.Advise(_hLmxServerId, GetLmxTagKey(item.Key));
@@ -306,10 +306,6 @@ namespace MXAccesRestAPI.MXDataHolder
 
         /// <summary>
         /// Removes a specific tag's data from the data store by id
-        /// </summary>
-        /// <param name="id">Datastore key</param>
-        /// <returns></returns> <summary>
-        /// 
         /// </summary>
         /// <param name="id">Datastore key</param>
         /// <returns></returns>
@@ -506,12 +502,12 @@ namespace MXAccesRestAPI.MXDataHolder
                     }
                     else
                     {
-                        //Console.WriteLine("SMALL CRY....");
+                        //Console.WriteLine($"SMALL CRY.... itemStatus [{itemStatus[0]}] is not successful");
                     }
                 }
                 else
                 {
-                    Console.WriteLine("BIG CRY....");
+                    Console.WriteLine($"BIG CRY.... {phItemHandle} is missing");
                 }
             });
         }
@@ -527,6 +523,11 @@ namespace MXAccesRestAPI.MXDataHolder
         public void WriteData(string tagName, object value, DateTime? timeStamp = null)
         {
             MXAttribute? item = _dataProvider.GetData(tagName);
+
+            if (item?.CurrentThread != threadNumber)
+            {
+                return;
+            }
             if (item?.Value == null)
             {
                 throw new Exception($"[{tagName}] Item was not found");
@@ -535,12 +536,13 @@ namespace MXAccesRestAPI.MXDataHolder
             {
                 if (timeStamp != null)
                 {
-                    _LmxServer.Write2(_hLmxServerId, GetLmxTagKey(item.Key), value.ToString(), timeStamp, _userLmxId);
+                    _LmxServer.Write2(_hLmxServerId, GetLmxTagKey(item.Key), value, timeStamp, _userLmxId);
                 }
                 else
                 {
-                    _LmxServer.Write(_hLmxServerId, GetLmxTagKey(item.Key), value.ToString(), _userLmxId);
+                    _LmxServer.Write(_hLmxServerId, GetLmxTagKey(item.Key), value, _userLmxId);
                 }
+
             }
         }
 
